@@ -1,10 +1,22 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { Eye } from "lucide-react"
 import Image from "next/image"
+import { useEffect, useState } from "react" // Add this import
+
 
 export default function Home() {
+  // Add this state for client-side rendering
+  const [isClient, setIsClient] = useState(false)
+  
+  // Add this effect to set isClient to true after mounting
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Main content */}
@@ -19,13 +31,19 @@ export default function Home() {
           <div className="relative z-10 flex flex-col md:flex-row">
             {/* Left side with logo */}
             <div className="p-8 flex items-center justify-center md:w-1/4">
-              <div className="w-24 h-24 relative">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-blue-600">
-                  <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="currentColor" />
-                  <text x="50" y="55" textAnchor="middle" fill="white" fontSize="24" fontWeight="bold">
-                    BK
-                  </text>
-                </svg>
+              <div className="w-72 h-72 relative">
+                {/* Conditional rendering based on client state */}
+                {isClient ? (
+                  <Image
+                    src="/images/bk-logo.png"
+                    alt="BK Logo"
+                    width={300}
+                    height={300}
+                    className="rounded-lg"
+                  />
+                ) : (
+                  <div className="w-72 h-72 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                )}
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   mongodb:
@@ -8,49 +8,36 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
-    networks:
-      - app-network
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - app-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: ./backend
     container_name: flask-backend
     ports:
       - "5000:5000"
+    volumes:
+      - ./backend:/app
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/chat_app
-      - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=your_secret_key_here
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - MONGO_URI=mongodb://admin:password@mongodb:27017/
     depends_on:
       - mongodb
-      - redis
-    networks:
-      - app-network
 
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: react-frontend
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
     depends_on:
       - backend
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
 
 volumes:
   mongodb_data:
