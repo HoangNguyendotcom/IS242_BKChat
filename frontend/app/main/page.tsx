@@ -220,7 +220,7 @@ export default function MainPage() {
     if (selectedContact) {
       setConversations((prev) => {
         const updatedConversation = prev[selectedContact].map((message) =>
-          message.id === messageId ? { ...message, userFeedback: isToxic ? "toxic" : "not_toxic" } : message,
+          message.id === messageId ? { ...message, userFeedback: isToxic ? "toxic" : "not_toxic" } as Message : message,
         )
 
         return {
