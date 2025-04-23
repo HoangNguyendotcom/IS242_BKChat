@@ -1,18 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { Eye } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useState } from "react" // Add this import
-
+import { useEffect, useState } from "react"
 
 export default function Home() {
-  // Add this state for client-side rendering
+  // Client-side rendering state
   const [isClient, setIsClient] = useState(false)
   
-  // Add this effect to set isClient to true after mounting
+  // Set isClient to true after mounting
   useEffect(() => {
     setIsClient(true)
   }, [])
@@ -28,96 +25,51 @@ export default function Home() {
             <div className="absolute -right-10 bottom-20 w-full h-96 bg-blue-300/30 rounded-full blur-xl transform -rotate-12"></div>
           </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row">
-            {/* Left side with logo */}
-            <div className="p-8 flex items-center justify-center md:w-2/5">
-              <div className="w-72 h-72 relative">
-                {/* Conditional rendering based on client state */}
-                {isClient ? (
-                  <Image
-                    src="/images/bk-logo.png"
-                    alt="BK Logo"
-                    width={300}
-                    height={300}
-                    className="rounded-lg"
-                  />
-                ) : (
-                  <div className="w-72 h-72 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
-                )}
+          <div className="relative z-10 flex flex-col items-center justify-center p-12 text-center">
+            {/* Logo */}
+            <div className="mb-8">
+              <div className="flex items-center justify-center">
+                <div className="w-24 h-24 relative mr-4">
+                  {isClient ? (
+                    <Image
+                      src="/images/logo.png"
+                      alt="BK Logo"
+                      width={100}
+                      height={100}
+                      className="rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-gray-100 rounded-lg"></div>
+                  )}
+                </div>
+                <h1 className="text-6xl font-bold text-red-500">BKchat</h1>
               </div>
             </div>
 
-            {/* Center login form */}
-            <div className="p-8 md:w-2/4 border border-blue-100 rounded-lg mx-4 my-6 bg-white/80 backdrop-blur-sm">
-              <div className="flex items-center justify-center mb-6">
-                <div className="flex items-center">
-                  <div className="w-18 h-18 relative">
-                {/* Conditional rendering based on client state */}
-                {isClient ? (
-                  <Image
-                    src="/images/logo.png"
-                    alt="BK Logo"
-                    width={50}
-                    height={50}
-                    className="rounded-lg"
-                  />
-                ) : (
-                  <div className="w-18 h-18 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
-                )}
-                  </div>
-                  <h1 className="text-5xl font-bold text-red-500">BKchat</h1>
-                </div>
-              </div>
-
-              <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
-              <p className="text-slate-700 mb-6">Please log in to continue</p>
-
-              <form className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="username" className="block text-sm font-medium">
-                    Username
-                  </label>
-                  <Input id="username" placeholder="admin" />
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="password" className="block text-sm font-medium">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Input id="password" type="password" placeholder="••••••••" />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      aria-label="Show password"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <Button className="w-full bg-blue-500 hover:bg-blue-600" asChild>
-                  <Link href="/main">Log In</Link>
-                </Button>
-
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-300"></div>
-                  </div>
-                </div>
-
-                <div className="text-center">
-                  <p className="text-sm text-slate-600 mb-2">Don't have an account?</p>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-blue-100 border-blue-200 text-blue-700 hover:bg-blue-200"
-                    asChild
-                  >
-                    <Link href="/signup">Sign Up</Link>
-                  </Button>
-                </div>
-              </form>
+            {/* Welcome Heading */}
+            <h2 className="text-4xl font-bold mb-6 text-blue-700">Welcome to BKChat!!!</h2>
+            
+            {/* Larger BK image */}
+            <div className="w-56 h-56 relative mb-10">
+              {isClient ? (
+                <Image
+                  src="/images/bk-logo.png"
+                  alt="BK Logo"
+                  width={300}
+                  height={300}
+                  className="rounded-lg"
+                />
+              ) : (
+                <div className="w-56 h-56 bg-gray-100 rounded-lg"></div>
+              )}
             </div>
+
+            <Button 
+              className="w-64 h-14 text-2xl bg-blue-500 hover:bg-blue-600" 
+              asChild
+            >
+              <Link href="/login">Start Chatting...</Link>
+            </Button>
           </div>
         </div>
       </div>

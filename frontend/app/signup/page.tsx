@@ -117,7 +117,7 @@ export default function SignupPage() {
                     className="w-full bg-blue-100 border-blue-200 text-blue-700 hover:bg-blue-200"
                     asChild
                   >
-                    <Link href="/">Log In</Link>
+                    <Link href="/login">Log In</Link>
                   </Button>
                 </div>
               </form>
