@@ -20,12 +20,12 @@ export default function SignupPage() {
             {/* Left side with logo */}
             <div className="p-8 flex items-center justify-center md:w-1/4">
               <div className="w-24 h-24 relative">
-                <svg viewBox="0 0 100 100" className="w-full h-full text-blue-600">
-                  <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="currentColor" />
-                  <text x="50" y="55" textAnchor="middle" fill="white" fontSize="24" fontWeight="bold">
-                    BK
-                  </text>
-                </svg>
+                <div
+                  className="absolute inset-0 bg-blue-600"
+                  style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                >
+                  <Image src="/images/logo.png" alt="BKChat Logo" fill className="object-contain p-2" />
+                </div>
               </div>
             </div>
 
@@ -33,9 +33,14 @@ export default function SignupPage() {
             <div className="p-8 md:w-2/4 border border-blue-100 rounded-lg mx-4 my-6 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center justify-center mb-6">
                 <div className="flex items-center">
-                  <svg viewBox="0 0 24 24" className="w-8 h-8 mr-2">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="black" />
-                  </svg>
+                  <div className="w-8 h-8 relative mr-2">
+                    <div
+                      className="absolute inset-0 bg-blue-600"
+                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
+                    >
+                      <Image src="/images/logo.png" alt="BKChat Logo" fill className="object-contain p-1" />
+                    </div>
+                  </div>
                   <h1 className="text-3xl font-bold text-red-500">BKchat</h1>
                 </div>
               </div>

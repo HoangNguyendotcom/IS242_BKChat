@@ -37,8 +37,8 @@ export default function Home() {
                   <Image
                     src="/images/bk-logo.png"
                     alt="BK Logo"
-                    width={300}
-                    height={300}
+                    width={500}
+                    height={500}
                     className="rounded-lg"
                   />
                 ) : (
@@ -51,10 +51,21 @@ export default function Home() {
             <div className="p-8 md:w-2/4 border border-blue-100 rounded-lg mx-4 my-6 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center justify-center mb-6">
                 <div className="flex items-center">
-                  <svg viewBox="0 0 24 24" className="w-8 h-8 mr-2">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="black" />
-                  </svg>
-                  <h1 className="text-3xl font-bold text-red-500">BKchat</h1>
+                  <div className="w-18 h-18 relative">
+                {/* Conditional rendering based on client state */}
+                {isClient ? (
+                  <Image
+                    src="/images/logo.png"
+                    alt="BK Logo"
+                    width={50}
+                    height={50}
+                    className="rounded-lg"
+                  />
+                ) : (
+                  <div className="w-18 h-18 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                )}
+                  </div>
+                  <h1 className="text-5xl font-bold text-red-500">BKchat</h1>
                 </div>
               </div>
 

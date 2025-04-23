@@ -31,8 +31,9 @@ interface Message {
 }
 
 export default function MainPage() {
-  const [selectedContact, setSelectedContact] = useState<string | null>("1") // Default to first contact
+  const [selectedContact, setSelectedContact] = useState<string | null>(null) // Start with no contact selected
   const [messageInput, setMessageInput] = useState("")
+  const optionsMenuRef = useRef<HTMLDivElement>(null);
   const [optionMenu, setOptionMenu] = useState<{
     visible: boolean
     messageId: string | null
@@ -48,8 +49,8 @@ export default function MainPage() {
     {
       id: "1",
       name: "Dac Hoang",
-      username: "@dachoang",
-      avatar: "/placeholder.svg?height=40&width=40",
+      username: "@ndhoang",
+      avatar: "/avatars/avatar1.jpg",
       lastMessage: "Dac Hoang reacted with",
       date: "Mar 23",
       reacted: "❤️",
@@ -57,40 +58,40 @@ export default function MainPage() {
     {
       id: "2",
       name: "Tri Cuong",
-      username: "@tricuong",
-      avatar: "/placeholder.svg?height=40&width=40",
+      username: "@ntcuong",
+      avatar: "/avatars/avatar2.jpg",
       lastMessage: "Anh ăn cơm chưa?",
       date: "Mar 24",
     },
     {
       id: "3",
       name: "Tuan Nam",
-      username: "@tuannam",
-      avatar: "/placeholder.svg?height=40&width=40",
+      username: "@ntnam",
+      avatar: "/avatars/avatar3.jpg",
       lastMessage: "Làm j đấy?",
       date: "Mar 25",
     },
     {
       id: "4",
       name: "Hoang Long",
-      username: "@hbhlong",
-      avatar: "/placeholder.svg?height=40&width=40",
-      lastMessage: "Còn nhớ mua cà cây Minh?",
+      username: "@nbhlong",
+      avatar: "/avatars/avatar4.png",
+      lastMessage: "Hello mrPip",
       date: "Mar 25",
     },
     {
       id: "5",
       name: "Le Phu",
-      username: "@lephu",
-      avatar: "/placeholder.svg?height=40&width=40",
+      username: "@tlphu",
+      avatar: "/avatars/avatar5.png",
       lastMessage: "Oke em",
       date: "Mar 25",
     },
     {
       id: "6",
       name: "Hoang Minh",
-      username: "@hminh",
-      avatar: "/placeholder.svg?height=40&width=40",
+      username: "@vhminh",
+      avatar: "/avatars/avatar2.jpg",
       lastMessage: "Hoang Minh reacted with",
       date: "Mar 25",
       reactedWith: "👍",
@@ -170,8 +171,15 @@ export default function MainPage() {
   }, [currentConversation])
 
   // Close option menu when clicking outside
+  // MODIFIED: Added check to prevent closing when clicking on the menu itself
   useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e: MouseEvent) => {
+      // Don't close if clicking on the menu itself or the button
+      if ((e.target as Element).closest('.options-menu') || 
+          (e.target as Element).closest('.options-toggle-button')) {
+        return;
+      }
+      
       setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
     }
 
@@ -201,19 +209,62 @@ export default function MainPage() {
     }
   }
 
+  // MODIFIED: Updated to position the menu based on screen boundaries
   const handleMessageOptions = (e: React.MouseEvent, messageId: string) => {
-    e.stopPropagation() // Prevent the click from closing the menu
-
-    const rect = (e.target as HTMLElement).getBoundingClientRect()
-
+    e.stopPropagation();
+    e.preventDefault(); 
+    
+    // Critical fix: Stop the event from propagating to document level
+    // which would trigger the handleClickOutside function
+    e.nativeEvent.stopImmediatePropagation();
+    
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    
+    // Get viewport dimensions
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Initial position
+    let top = rect.bottom + window.scrollY;
+    let left = rect.left + window.scrollX;
+    
+    // First show the menu with initial position
     setOptionMenu({
       visible: true,
       messageId,
-      position: {
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-      },
-    })
+      position: { top, left },
+    });
+    
+    // Then check and adjust position after it's rendered
+    setTimeout(() => {
+      if (optionsMenuRef.current) {
+        const menuRect = optionsMenuRef.current.getBoundingClientRect();
+        
+        // Check if menu would be off the bottom of the screen
+        if (top + menuRect.height > window.scrollY + viewportHeight) {
+          // Position menu above the button instead
+          top = rect.top + window.scrollY - menuRect.height;
+        }
+        
+        // Check if menu would be off the right of the screen
+        if (left + menuRect.width > window.scrollX + viewportWidth) {
+          left = window.scrollX + viewportWidth - menuRect.width - 10; // 10px margin
+        }
+        
+        // Check if menu would be off the left of the screen
+        if (left < window.scrollX) {
+          left = window.scrollX + 10; // 10px margin
+        }
+        
+        // Update with adjusted position
+        setOptionMenu({
+          visible: true,
+          messageId,
+          position: { top, left },
+        });
+      }
+    }, 0);
   }
 
   const handleToxicFeedback = (messageId: string, isToxic: boolean) => {
@@ -232,7 +283,7 @@ export default function MainPage() {
 
     setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
   }
-
+  
   const handleDeleteMessage = (messageId: string) => {
     if (selectedContact) {
       setConversations((prev) => {
@@ -247,24 +298,45 @@ export default function MainPage() {
 
     setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
   }
+  
+  // Add this state for client-side rendering
+  const [isClient, setIsClient] = useState(false)
+      
+  // Add this effect to set isClient to true after mounting
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   return (
     <div className="flex h-screen bg-white">
       {/* Left sidebar */}
       <div className="w-80 border-r flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b flex items-center">
+        <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-8 h-8 relative mr-2">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-blue-600">
-                <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="currentColor" />
-                <text x="50" y="55" textAnchor="middle" fill="white" fontSize="24" fontWeight="bold">
-                  BK
-                </text>
-              </svg>
+            <div className="w-12 h-12 relative">
+              {/* Conditional rendering based on client state */}
+              {isClient ? (
+                <Image
+                  src="/images/logo.png"
+                  alt="BK Logo"
+                  width={40}
+                  height={40}
+                  className="rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+              )}
             </div>
-            <span className="font-bold text-lg">BKChat</span>
+            <span className="text-3xl font-bold text-red-500">BKChat</span>
           </div>
+          <Link 
+            href="/main" 
+            className="text-gray-500" 
+            onClick={() => setSelectedContact(null)}
+          >
+            <Home className="h-5 w-5" />
+          </Link>
         </div>
 
         {/* Messages header */}
@@ -293,7 +365,7 @@ export default function MainPage() {
             >
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                  <Image src={contact.avatar || "/placeholder.svg"} alt={contact.name} width={40} height={40} />
+                  <Image src={contact.avatar || "/avatars/avatar.jpg"} alt={contact.name} width={40} height={40} />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -314,17 +386,25 @@ export default function MainPage() {
         {/* User profile */}
         <div className="p-3 border-t flex items-center justify-between">
           <Link href="/admin" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden">
-              <Image src="/placeholder.svg?height=36&width=36" alt="User" width={36} height={36} />
+            <div className="w-12 h-12 relative">
+              {/* Conditional rendering based on client state */}
+              {isClient ? (
+                <Image
+                  src="/images/profile.png"
+                  alt="profile"
+                  width={40}
+                  height={40}
+                  className="rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+              )}
             </div>
             <div>
               <p className="text-sm font-medium">Minh Trinh</p>
               <p className="text-xs text-gray-500">@minhtrinhk241</p>
             </div>
           </Link>
-          <button>
-            <MoreVertical className="h-5 w-5 text-gray-500" />
-          </button>
         </div>
       </div>
 
@@ -334,9 +414,6 @@ export default function MainPage() {
           {/* Chat header */}
           <div className="flex items-center p-4 border-b">
             <div className="flex-1 flex items-center">
-              <Link href="/main" className="mr-4">
-                <Home className="h-5 w-5 text-gray-500" />
-              </Link>
               <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden mr-3">
                 <Image
                   src={selectedContactData.avatar || "/placeholder.svg"}
@@ -363,7 +440,7 @@ export default function MainPage() {
                   {message.senderId !== "current-user" && (
                     <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
                       <Image
-                        src={selectedContactData.avatar || "/placeholder.svg"}
+                        src={selectedContactData.avatar || "/avatar/avatar1.jpg"}
                         alt={selectedContactData.name}
                         width={32}
                         height={32}
@@ -372,24 +449,38 @@ export default function MainPage() {
                   )}
                   <div className="flex flex-col relative group">
                     <div
-                      className={`rounded-lg px-4 py-2 max-w-xs ${
+                      className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
                         message.senderId === "current-user" ? "bg-blue-200 text-blue-900" : "bg-gray-100 text-gray-900"
                       } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
                     >
-                      {message.text}
-                      <button
-                        className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => handleMessageOptions(e, message.id)}
-                      >
-                        <MoreVertical className="h-4 w-4 text-gray-500" />
-                      </button>
+                      {/* For current user messages, show options button on the left */}
+                      {message.senderId === "current-user" && (
+                        <button
+                          className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                          onClick={(e) => handleMessageOptions(e, message.id)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      )}
+                      
+                      <span className="flex-1">{message.text}</span>
+                      
+                      {/* For other user messages, show options button on the right */}
+                      {message.senderId !== "current-user" && (
+                        <button
+                          className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                          onClick={(e) => handleMessageOptions(e, message.id)}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center mt-1">
                       <span className="text-xs text-gray-500">{message.timestamp}</span>
                       {message.userFeedback && (
                         <span
                           className={`ml-2 text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}
-                        >
+                          >
                           • {message.userFeedback === "toxic" ? "Marked as toxic" : "Marked as not toxic"}
                         </span>
                       )}
@@ -400,6 +491,44 @@ export default function MainPage() {
               <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/* Message options menu */}
+          {optionMenu.visible && (
+            <div
+              ref={optionsMenuRef}
+              className="fixed bg-white shadow-md rounded-md py-1 z-50 border border-gray-200 options-menu"
+              style={{ 
+                top: optionMenu.position.top, 
+                left: optionMenu.position.left,
+                minWidth: '200px' 
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-2 text-center font-medium border-b border-gray-100">OPTION</div>
+              {/* Find the current message to determine its feedback state */}
+              {optionMenu.messageId && currentConversation.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "toxic" ? (
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
+                  onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
+                >
+                  ... Not a toxic message
+                </button>
+              ) : (
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                  onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
+                >
+                  ... Toxic message
+                </button>
+              )}
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
+              >
+                Delete message
+              </button>
+            </div>
+          )}
 
           {/* Message input */}
           <div className="border-t p-3 flex items-center">
@@ -431,41 +560,13 @@ export default function MainPage() {
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">You don't have a message selected.</h2>
-            <p className="text-gray-500 mb-6">Choose one from your existing messages, or start a new one.</p>
-            <Button className="bg-blue-500 hover:bg-blue-600">New Message</Button>
+            <h2 className="text-2xl font-semibold mb-3">You don't have a conversation selected.</h2>
+            <p className="text-lg text-gray-500 mb-8">Choose one from your existing conversation, or start a new one.</p>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-lg py-2 px-4">New Conversation</Button>
           </div>
         </div>
       )}
 
-      {/* Message options menu */}
-      {optionMenu.visible && (
-        <div
-          className="absolute bg-white shadow-md rounded-md py-1 z-50 border border-gray-200"
-          style={{ top: optionMenu.position.top, left: optionMenu.position.left }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-4 py-2 text-center font-medium border-b border-gray-100">OPTION</div>
-          <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-500"
-            onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
-          >
-            Not a toxic message
-          </button>
-          <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-            onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
-          >
-            Toxic message
-          </button>
-          <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-            onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
-          >
-            Delete message
-          </button>
-        </div>
-      )}
     </div>
   )
 }

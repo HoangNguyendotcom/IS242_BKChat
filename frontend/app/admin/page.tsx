@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Home, User, LayoutDashboard, Settings, Bell, LogOut, MoreHorizontal } from "lucide-react"
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState("DASHBOARD")
+  const [activeTab, setActiveTab] = useState<string | null>(null)
+  const [activeOptionMenu, setActiveOptionMenu] = useState<number | null>(null)
   const router = useRouter()
 
   const menuItems = [
@@ -52,23 +54,53 @@ export default function AdminPage() {
     },
   }
 
+  const toggleOptionMenu = (index: number) => {
+    if (activeOptionMenu === index) {
+      setActiveOptionMenu(null)
+    } else {
+      setActiveOptionMenu(index)
+    }
+  }
+
+  // Close option menu when clicking outside
+  const handleClickOutside = () => {
+    setActiveOptionMenu(null)
+  }
+
+  // Add this state for client-side rendering
+    const [isClient, setIsClient] = useState(false)
+    
+    // Add this effect to set isClient to true after mounting
+    useEffect(() => {
+      setIsClient(true)
+    }, [])
+
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-white" onClick={handleClickOutside}>
       {/* Left sidebar */}
       <div className="w-60 border-r flex flex-col bg-gray-50">
         {/* Header */}
-        <div className="p-4 border-b flex items-center">
+        <div className="p-4 border-b flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-8 h-8 relative mr-2">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-blue-600">
-                <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="currentColor" />
-                <text x="50" y="55" textAnchor="middle" fill="white" fontSize="24" fontWeight="bold">
-                  BK
-                </text>
-              </svg>
+            <div className="w-12 h-12 relative">
+                {/* Conditional rendering based on client state */}
+                  {isClient ? (
+                    <Image
+                      src="/images/logo.png"
+                      alt="BK Logo"
+                      width={40}
+                      height={40}
+                      className="rounded-lg"
+                    />
+                    ) : (
+              <div className="w-12 h-12 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                  )}
             </div>
-            <span className="font-bold text-lg">BKChat</span>
+            <span className="text-3xl font-bold text-red-500">BKChat</span>
           </div>
+          <Link href="/main" className="text-gray-500">
+            <Home className="h-5 w-5" />
+          </Link>
         </div>
 
         {/* Administrator title */}
@@ -106,13 +138,35 @@ export default function AdminPage() {
       <div className="flex-1">
         {/* Top navigation */}
         <div className="p-4 border-b flex items-center">
-          <Link href="/main" className="text-gray-500">
-            <Home className="h-5 w-5" />
-          </Link>
+          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+            <Image src="/images/profile.png" alt="Profile" width={40} height={40} className="object-cover" />
+          </div>
         </div>
 
         {/* Content based on active tab */}
         <div className="p-6">
+          {activeTab === null && (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)]">
+              <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="w-20 h-20 rounded-full bg-gray-200 overflow-hidden">
+                    <Image src="/images/profile.png" alt="Minh Trinh" width={80} height={80} className="object-cover" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Minh Trinh</h2>
+                    <p className="text-gray-500">@tcminh.sdh241</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-gray-600">
+                    Welcome to the BKChat administration panel. Select an option from the sidebar to manage your
+                    application.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === "USER" && (
             <div>
               <h2 className="text-xl font-bold mb-6">FRIEND LIST:</h2>
@@ -139,10 +193,34 @@ export default function AdminPage() {
                         <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
                           {friend.toxicRate}
                         </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">
-                          <button className="text-blue-500">
+                        <td className="border border-gray-300 px-4 py-2 text-center relative">
+                          <button
+                            className="text-blue-500"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleOptionMenu(index)
+                            }}
+                          >
                             <MoreHorizontal className="h-5 w-5 inline" />
                           </button>
+
+                          {activeOptionMenu === index && (
+                            <div className="absolute right-10 top-2 bg-white shadow-lg rounded-md border border-gray-200 z-10 w-40 py-1">
+                              <div className="px-3 py-2 text-center font-medium border-b border-gray-100">OPTIONS</div>
+                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                                <span>Report</span>
+                              </button>
+                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-500">
+                                <span>Block</span>
+                              </button>
+                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                                <span>Unfriend</span>
+                              </button>
+                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                                <span>Uncheck</span>
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -247,36 +325,46 @@ export default function AdminPage() {
 
                 <div className="bg-white p-4 rounded-md shadow-sm">
                   <h3 className="font-medium mb-4">Users Feedback Analysis</h3>
-                  <div className="flex justify-center">
-                    <div className="relative w-48 h-48">
-                      {/* This is a simplified pie chart representation */}
-                      <div className="absolute inset-0 rounded-full overflow-hidden">
-                        <div
-                          className="absolute inset-0 bg-blue-500"
-                          style={{ clipPath: "polygon(50% 50%, 0 0, 0 100%, 100% 100%, 100% 0)" }}
-                        ></div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-xl font-semibold text-center mb-4">Users Feedback Analysis</h3>
+                    <div className="flex flex-wrap justify-center gap-4 mb-4">
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.trueNegative} TN</span>
                       </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-white rounded-full w-16 h-16"></div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-yellow-300 rounded-full mr-2"></div>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.truePositive} TP</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falseNegative} FN</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falsePositive} FP</span>
                       </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-blue-500 mr-2"></div>
-                      <span className="text-xs">{mlData.feedbackAnalysis.trueNegative} TN</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-yellow-400 mr-2"></div>
-                      <span className="text-xs">{mlData.feedbackAnalysis.truePositive} TP</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-red-500 mr-2"></div>
-                      <span className="text-xs">{mlData.feedbackAnalysis.falseNegative} FN</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 bg-orange-500 mr-2"></div>
-                      <span className="text-xs">{mlData.feedbackAnalysis.falsePositive} FP</span>
+                    <div className="relative w-64 h-64 mx-auto">
+                      {/* SVG Pie Chart - Starting from top (90 degrees) */}
+                      <svg viewBox="0 0 100 100" className="w-full h-full">
+                        {/* Segments calculated with precise arc commands */}
+
+                        {/* TN - Blue (78.5%) - 282.6 degrees */}
+                        <path d="M 50 50 L 50 10 A 40 40 0 0 1 50 90 A 40 40 0 0 1 13.4 34.4 Z" fill="#3b82f6" />
+
+                        {/* TP - Yellow (18.6%) - 66.96 degrees */}
+                        <path d="M 50 50 L 13.4 34.4 A 40 40 0 0 1 26.4 13.6 Z" fill="#fde047" />
+
+                        {/* FN - Green (2.4%) - 8.64 degrees */}
+                        <path d="M 50 50 L 26.4 13.6 A 40 40 0 0 1 34.4 10.8 Z" fill="#22c55e" />
+
+                        {/* FP - Red (0.5%) - 1.8 degrees */}
+                        <path d="M 50 50 L 34.4 10.8 A 40 40 0 0 1 50 10 Z" fill="#ef4444" />
+
+                        {/* White center circle */}
+                        <circle cx="50" cy="50" r="25" fill="white" />
+                      </svg>
                     </div>
                   </div>
                 </div>
