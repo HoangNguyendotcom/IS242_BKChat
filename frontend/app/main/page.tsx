@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, MoreVertical, Home, ImageIcon, Smile, Send } from "lucide-react"
+import { Search, MoreVertical, Home, ImageIcon, Smile, Send, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -44,13 +44,19 @@ export default function MainPage() {
     position: { top: 0, left: 0 },
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // New search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchDropdownRef = useRef<HTMLDivElement>(null);
 
   const contacts: Contact[] = [
     {
       id: "1",
       name: "Dac Hoang",
       username: "@ndhoang.sdh241",
-      avatar: "/avatars/avatar1.jpg",
+      avatar: "/avatars/avatar.jpeg",
       lastMessage: "Dac Hoang reacted with",
       date: "Mar 23",
       reacted: "❤️",
@@ -162,6 +168,58 @@ export default function MainPage() {
     ],
   })
 
+  // Function to filter contacts based on search query
+  const getFilteredContacts = () => {
+    if (!searchQuery.trim()) return contacts;
+    
+    return contacts.filter(contact => 
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      contact.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  // Handle search input change
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setIsSearchDropdownOpen(true);
+  };
+
+  // Handle selection from search dropdown
+  const handleSelectContact = (contactId: string) => {
+    setSelectedContact(contactId);
+    setIsSearchDropdownOpen(false);
+    setSearchQuery("");
+    
+    // Optional: Focus back on input after selection
+    if (searchInputRef.current) {
+      searchInputRef.current.blur();
+    }
+  };
+
+  // Setup click outside listeners for search dropdown
+  useEffect(() => {
+    // Handler for click outside
+    const handleClickOutside = (event: MouseEvent) => {
+      // If click is outside both the input and dropdown
+      const clickedElement = event.target as Node;
+      const isOutsideInput = searchInputRef.current && !searchInputRef.current.contains(clickedElement);
+      const isOutsideDropdown = searchDropdownRef.current && !searchDropdownRef.current.contains(clickedElement);
+      
+      if (isOutsideInput && isOutsideDropdown && isSearchDropdownOpen) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+    
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchDropdownOpen]);
+
+  // Get selected contact data and conversation
   const selectedContactData = contacts.find((contact) => contact.id === selectedContact)
   const currentConversation = selectedContact ? conversations[selectedContact] || [] : []
 
@@ -171,7 +229,6 @@ export default function MainPage() {
   }, [currentConversation])
 
   // Close option menu when clicking outside
-  // MODIFIED: Added check to prevent closing when clicking on the menu itself
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       // Don't close if clicking on the menu itself or the button
@@ -209,7 +266,7 @@ export default function MainPage() {
     }
   }
 
-  // MODIFIED: Updated to position the menu based on screen boundaries
+  // Updated to position the menu based on screen boundaries
   const handleMessageOptions = (e: React.MouseEvent, messageId: string) => {
     e.stopPropagation();
     e.preventDefault(); 
@@ -308,7 +365,7 @@ export default function MainPage() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-slate-100 p-4">
+    <div className="flex h-screen bg-slate-100 p-4 ">
       {/* Left sidebar */}
       <div className="w-80 border-r flex flex-col">
         {/* Header */}
@@ -342,24 +399,72 @@ export default function MainPage() {
         {/* Messages header */}
         <div className="p-4 font-medium">Messages</div>
 
-        {/* Search */}
-        <div className="px-4 pb-2">
+        {/* Enhanced Search with dropdown */}
+        <div className="px-4 pb-2 relative">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
+              ref={searchInputRef}
               placeholder="Search people or messages"
               className="pl-9 bg-gray-100 border-0 focus-visible:ring-0 text-sm"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              onFocus={() => setIsSearchDropdownOpen(true)}
             />
+            {searchQuery && (
+              <button 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                onClick={() => {
+                  setSearchQuery("");
+                  setIsSearchDropdownOpen(true);
+                  if (searchInputRef.current) searchInputRef.current.focus();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+          
+          {/* Search dropdown */}
+          {isSearchDropdownOpen && (
+            <div 
+              ref={searchDropdownRef}
+              className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-60 overflow-auto"
+            >
+              {getFilteredContacts().length > 0 ? (
+                getFilteredContacts().map((contact) => (
+                  <button
+                    key={contact.id}
+                    className="w-full text-left p-3 hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100"
+                    onClick={() => handleSelectContact(contact.id)}
+                  >
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                        <Image src={contact.avatar || "/avatars/avatar.jpg"} alt={contact.name} width={32} height={32} />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-800">{contact.name}</p>
+                      <p className="text-xs text-gray-500">{contact.username}</p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500 text-sm">
+                  No results found
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Contacts list */}
-        <div className="flex-1 overflow-auto">
+        {/* Contacts list with darker selection background */}
+        <div className="flex-1 overflow-auto ">
           {contacts.map((contact) => (
             <button
               key={contact.id}
               className={`w-full text-left p-3 hover:bg-gray-50 flex items-start gap-3 ${
-                selectedContact === contact.id ? "bg-gray-100" : ""
+                selectedContact === contact.id ? "bg-gray-200" : ""
               }`}
               onClick={() => setSelectedContact(contact.id)}
             >
@@ -370,7 +475,7 @@ export default function MainPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between">
-                  <p className="font-medium text-sm truncate">{contact.name}</p>
+                  <p className="font-medium text-sm truncate text-gray-800 ">{contact.name}</p>
                   <span className="text-xs text-gray-500">{contact.date}</span>
                 </div>
                 <p className="text-xs text-gray-500">{contact.username}</p>
@@ -423,7 +528,7 @@ export default function MainPage() {
                 />
               </div>
               <div>
-                <p className="font-medium">{selectedContactData.name}</p>
+                <p className="font-medium text-gray-800">{selectedContactData.name}</p>
                 <p className="text-xs text-gray-500">{selectedContactData.username}</p>
               </div>
             </div>
