@@ -10,7 +10,6 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [activeOptionMenu, setActiveOptionMenu] = useState<number | null>(null)
   const router = useRouter()
-
   const menuItems = [
     { id: "USER", icon: User, label: "USER" },
     { id: "DASHBOARD", icon: LayoutDashboard, label: "DASHBOARD" },
@@ -141,12 +140,24 @@ export default function AdminPage() {
     trueNegative: roundNumber((trueNegative / total) * 100, 2),
   };
 
+  // Find your toggleOptionMenu function and replace it with this version
   const toggleOptionMenu = (index: number) => {
     if (activeOptionMenu === index) {
       setActiveOptionMenu(null)
     } else {
       setActiveOptionMenu(index)
-    }
+      // Position the dropdown after it's rendered
+      setTimeout(() => {
+        const button = document.querySelectorAll('.text-blue-500')[index] as HTMLElement;
+        const dropdown = document.querySelector('.fixed.bg-white.shadow-lg') as HTMLElement;
+      
+        if (button && dropdown) {
+          const rect = button.getBoundingClientRect();
+          dropdown.style.top = `${rect.bottom + window.scrollY + 5}px`;
+          dropdown.style.left = `${rect.left + window.scrollX - dropdown.offsetWidth + button.offsetWidth}px`;
+        }
+      }, 0);
+     }
   }
 
   // Close option menu when clicking outside
@@ -223,112 +234,107 @@ export default function AdminPage() {
 
       {/* Main content */}
       <div className="flex-1">
-        {/* Top navigation */}
-        <div className="p-4 border-b flex items-center">
-          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-            <Image src="/images/profile.png" alt="Profile" width={40} height={40} className="object-cover" />
-          </div>
-        </div>
 
         {/* Content based on active tab */}
         <div className="p-6">
-          {activeTab === null && (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)]">
-              <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-20 h-20 rounded-full bg-gray-200 overflow-hidden">
-                    <Image src="/images/profile.png" alt="Minh Trinh" width={80} height={80} className="object-cover" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Minh Trinh</h2>
-                    <p className="text-gray-500">@tcminh.sdh241</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <p className="text-gray-600">
-                    Welcome to the BKChat administration panel. Select an option from the sidebar to manage your
-                    application.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+        {activeTab === null && (
+  <div className="flex flex-col items-start justify-start h-[calc(100vh-6rem)] p-6"> {/* Changed from center to start */}
+    <div className="bg-white rounded-lg shadow-md p-10 w-full max-w-2xl"> {/* Increased padding and max width */}
+      <div className="flex items-center space-x-8 mb-8"> {/* Increased spacing */}
+        <div className="w-32 h-32 rounded-full bg-gray-200 overflow-hidden"> {/* Increased image size */}
+          <Image src="/images/profile.png" alt="Cong Minh" width={128} height={128} className="object-cover" />
+        </div>
+        <div>
+          <h2 className="text-4xl font-bold">Cong Minh</h2> {/* Larger text */}
+          <p className="text-gray-500 text-xl">@tcminh.sdh241</p> {/* Larger text */}
+        </div>
+      </div>
+      <div className="space-y-4">
+        <p className="text-gray-600 text-xl"> {/* Larger text */}
+          Select an option from the sidebar to manage your
+          application.
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
           {activeTab === "USER" && (
             <div>
               <h2 className="text-xl font-bold mb-6">FRIEND LIST:</h2>
 
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto"> {/* Changed back to overflow-x-auto but added relative */}
                 <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Total Messages</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Toxic Messages</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Toxic Rate</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {friends.map((friend, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-2">{friend.name}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center">{friend.totalMessages}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
-                          {friend.toxicMessages}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
-                          {friend.toxicRate}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-center relative">
-                          <button
-                            className="text-blue-500"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleOptionMenu(index)
-                            }}
-                          >
-                            <MoreHorizontal className="h-5 w-5 inline" />
-                          </button>
+                <thead>
+                  <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Total Messages</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Toxic Messages</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Toxic Rate</th>
+                  <th className="border border-gray-300 px-4 py-2 text-center">Action</th>
+                  </tr>
+                </thead>
+              <tbody>
+              {friends.map((friend, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                <td className="border border-gray-300 px-4 py-2">{friend.name}</td>
+                <td className="border border-gray-300 px-4 py-2 text-center">{friend.totalMessages}</td>
+                <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
+                  {friend.toxicMessages}
+                  </td>
+                <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
+                  {friend.toxicRate}
+                </td>
+                <td className="border border-gray-300 px-4 py-2 text-center">
+                  <div className="relative"> {/* Keep this relative container */}
+                    <button
+                      className="text-blue-500"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleOptionMenu(index)
+                      }}
+                    >
+                      <MoreHorizontal className="h-5 w-5 inline" />
+                    </button>
 
-                          {activeOptionMenu === index && (
-                            <div className="absolute right-10 top-2 bg-white shadow-lg rounded-md border border-gray-200 z-10 w-40 py-1">
-                              <div className="px-3 py-2 text-center font-medium border-b border-gray-100">OPTIONS</div>
-                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-                                <span>Report</span>
-                              </button>
-                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-500">
-                                <span>Block</span>
-                              </button>
-                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-                                <span>Unfriend</span>
-                              </button>
-                              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-                                <span>Uncheck</span>
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        {activeOptionMenu === index && (
+                        <div className="fixed bg-white shadow-lg rounded-md border border-gray-200 w-40 py-1 z-50"> {/* Changed from absolute to fixed for better positioning */}
+                        <div className="px-3 py-2 text-center font-medium border-b border-gray-100">OPTIONS</div>
+                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                          <span>Report</span>
+                        </button>
+                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-500">
+                          <span>Block</span>
+                        </button>
+                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                          <span>Unfriend</span>
+                        </button>
+                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-green-500">
+                          <span>Uncheck</span>
+                        </button>
+                      </div>
+                      )}
+                  </div>
+                </td>
+              </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-              <div className="flex justify-center mt-4">
-                <div className="flex space-x-2">
-                  <button className="px-3 py-1 bg-gray-300 rounded">1</button>
-                  <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">2</button>
-                  <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">3</button>
-                </div>
-              </div>
-            </div>
-          )}
-
+        <div className="flex justify-center mt-4">
+          <div className="flex space-x-2">
+          <button className="px-3 py-1 bg-gray-300 rounded">1</button>
+          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">2</button>
+          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">3</button>
+        </div>
+      </div>
+    </div>
+    )}
           {activeTab === "DASHBOARD" && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">ML_model analysis:</h2>
+                <h2 className="text-3xl font-bold">ML model analysis:</h2>
                 <button className="px-4 py-1 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
                   Report
                 </button>
@@ -336,23 +342,23 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <p className="text-sm text-gray-500 mb-2">Total messages:</p>
-                  <p className="text-3xl font-bold text-center">{mlData.totalMessages}</p>
+                  <p className="text-xl text-gray-500 mb-2">Total messages:</p>
+                  <p className="text-5xl font-bold text-center">{mlData.totalMessages}</p>
                 </div>
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <p className="text-sm text-gray-500 mb-2">Toxic messages:</p>
-                  <p className="text-3xl font-bold text-center">{mlData.toxicMessages}</p>
+                  <p className="text-xl text-gray-500 mb-2">Toxic messages:</p>
+                  <p className="text-5xl font-bold text-center">{mlData.toxicMessages}</p>
                 </div>
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <p className="text-sm text-gray-500 mb-2">User feedback:</p>
+                  <p className="text-xl text-gray-500 mb-2">User feedback:</p>
                   <div className="flex justify-center space-x-8">
                     <div className="text-center">
-                      <p className="text-red-500 font-bold">Toxic</p>
-                      <p className="text-xl font-bold">{mlData.userFeedback.toxic}</p>
+                      <p className="text-3xl text-red-500 font-bold">Toxic</p>
+                      <p className="text-3xl font-bold">{mlData.userFeedback.toxic}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-green-500 font-bold">Not Toxic</p>
-                      <p className="text-xl font-bold">{mlData.userFeedback.notToxic}</p>
+                      <p className="text-3xl text-green-500 font-bold">Not Toxic</p>
+                      <p className="text-3xl font-bold">{mlData.userFeedback.notToxic}</p>
                     </div>
                   </div>
                 </div>
@@ -360,7 +366,7 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <h3 className="font-medium mb-4">Model Performance:</h3>
+                  <h3 className="text-3xl font-bold mb-4">Model Performance:</h3>
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between mb-1">
@@ -414,9 +420,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <h3 className="font-medium mb-4">Users Feedback Analysis</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-xl font-semibold text-center mb-4">Users Feedback Analysis</h3>
+                  <h3 className="text-3xl font-bold mb-4">Users Feedback Analysis</h3>
                     <div className="flex flex-wrap justify-center gap-4 mb-4">
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
@@ -435,7 +439,7 @@ export default function AdminPage() {
                         <span className="text-sm font-medium">{mlData.feedbackAnalysis.falsePositive}% FP</span>
                       </div>
                     </div>
-                    <div className="relative w-64 h-64 mx-auto">
+                    <div className="relative w-72 h-72 mx-auto">
                       {/* Fixed SVG Pie Chart */}
                       <svg viewBox="0 0 100 100" className="w-full h-full">
                         {(() => {
@@ -525,8 +529,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {activeTab === "GENERAL" && (
             <div>

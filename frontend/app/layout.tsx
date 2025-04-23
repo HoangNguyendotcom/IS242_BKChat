@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'BkChat',
   description: 'Created by JamesNg',
   generator: 'JamesNg',
+  icons: {
+    icon: '/images/bk-logo.png',
+  },
 }
 
 export default function RootLayout({

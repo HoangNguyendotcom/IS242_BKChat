@@ -49,7 +49,7 @@ export default function MainPage() {
     {
       id: "1",
       name: "Dac Hoang",
-      username: "@ndhoang",
+      username: "@ndhoang.sdh241",
       avatar: "/avatars/avatar1.jpg",
       lastMessage: "Dac Hoang reacted with",
       date: "Mar 23",
@@ -58,23 +58,23 @@ export default function MainPage() {
     {
       id: "2",
       name: "Tri Cuong",
-      username: "@ntcuong",
-      avatar: "/avatars/avatar2.jpg",
+      username: "@ntcuong.sdh241",
+      avatar: "/avatars/avatar2.png",
       lastMessage: "Anh ăn cơm chưa?",
       date: "Mar 24",
     },
     {
       id: "3",
       name: "Tuan Nam",
-      username: "@ntnam",
-      avatar: "/avatars/avatar3.jpg",
+      username: "@ntnam.sdh24",
+      avatar: "/avatars/avatar3.avif",
       lastMessage: "Làm j đấy?",
       date: "Mar 25",
     },
     {
       id: "4",
       name: "Hoang Long",
-      username: "@nbhlong",
+      username: "@nbhlong.sdh24",
       avatar: "/avatars/avatar4.png",
       lastMessage: "Hello mrPip",
       date: "Mar 25",
@@ -82,7 +82,7 @@ export default function MainPage() {
     {
       id: "5",
       name: "Le Phu",
-      username: "@tlphu",
+      username: "@tlphu.sdh24",
       avatar: "/avatars/avatar5.png",
       lastMessage: "Oke em",
       date: "Mar 25",
@@ -90,8 +90,8 @@ export default function MainPage() {
     {
       id: "6",
       name: "Hoang Minh",
-      username: "@vhminh",
-      avatar: "/avatars/avatar2.jpg",
+      username: "@vhminh.sdh24",
+      avatar: "/avatars/avatar2.png",
       lastMessage: "Hoang Minh reacted with",
       date: "Mar 25",
       reactedWith: "👍",
@@ -308,7 +308,7 @@ export default function MainPage() {
   }, [])
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-slate-100 p-4">
       {/* Left sidebar */}
       <div className="w-80 border-r flex flex-col">
         {/* Header */}
@@ -401,8 +401,8 @@ export default function MainPage() {
               )}
             </div>
             <div>
-              <p className="text-sm font-medium">Minh Trinh</p>
-              <p className="text-xs text-gray-500">@minhtrinhk241</p>
+              <p className="text-sm font-medium">Cong Minh</p>
+              <p className="text-xs text-gray-500">@tcminh.sdh24</p>
             </div>
           </Link>
         </div>

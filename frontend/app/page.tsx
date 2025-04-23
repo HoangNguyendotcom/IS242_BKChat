@@ -30,15 +30,15 @@ export default function Home() {
 
           <div className="relative z-10 flex flex-col md:flex-row">
             {/* Left side with logo */}
-            <div className="p-8 flex items-center justify-center md:w-1/4">
+            <div className="p-8 flex items-center justify-center md:w-2/5">
               <div className="w-72 h-72 relative">
                 {/* Conditional rendering based on client state */}
                 {isClient ? (
                   <Image
                     src="/images/bk-logo.png"
                     alt="BK Logo"
-                    width={500}
-                    height={500}
+                    width={300}
+                    height={300}
                     className="rounded-lg"
                   />
                 ) : (
@@ -69,7 +69,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <h2 className="text-xl font-bold mb-1">Welcome Back!</h2>
+              <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
               <p className="text-slate-700 mb-6">Please log in to continue</p>
 
               <form className="space-y-4">
@@ -117,19 +117,6 @@ export default function Home() {
                   </Button>
                 </div>
               </form>
-            </div>
-
-            {/* Right side with illustration */}
-            <div className="hidden md:flex items-center justify-center p-8 md:w-1/4">
-              <div className="w-full h-48 relative">
-                <Image
-                  src="/placeholder.svg?height=192&width=192"
-                  alt="People collaborating"
-                  width={192}
-                  height={192}
-                  className="object-contain"
-                />
-              </div>
             </div>
           </div>
         </div>

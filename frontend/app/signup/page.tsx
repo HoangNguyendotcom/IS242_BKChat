@@ -1,10 +1,22 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { Eye } from "lucide-react"
 import Image from "next/image"
+import { useEffect, useState } from "react" // Add this import
+
 
 export default function SignupPage() {
+  // Add this state for client-side rendering
+  const [isClient, setIsClient] = useState(false)
+  
+  // Add this effect to set isClient to true after mounting
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Main content */}
@@ -18,34 +30,46 @@ export default function SignupPage() {
 
           <div className="relative z-10 flex flex-col md:flex-row">
             {/* Left side with logo */}
-            <div className="p-8 flex items-center justify-center md:w-1/4">
-              <div className="w-24 h-24 relative">
-                <div
-                  className="absolute inset-0 bg-blue-600"
-                  style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                >
-                  <Image src="/images/logo.png" alt="BKChat Logo" fill className="object-contain p-2" />
-                </div>
-              </div>
-            </div>
+            <div className="p-8 flex items-center justify-center md:w-2/5">
+                          <div className="w-72 h-72 relative">
+                            {/* Conditional rendering based on client state */}
+                            {isClient ? (
+                              <Image
+                                src="/images/bk-logo.png"
+                                alt="BK Logo"
+                                width={300}
+                                height={300}
+                                className="rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-72 h-72 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                            )}
+                          </div>
+                        </div>
 
             {/* Center signup form */}
             <div className="p-8 md:w-2/4 border border-blue-100 rounded-lg mx-4 my-6 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center justify-center mb-6">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 relative mr-2">
-                    <div
-                      className="absolute inset-0 bg-blue-600"
-                      style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}
-                    >
-                      <Image src="/images/logo.png" alt="BKChat Logo" fill className="object-contain p-1" />
-                    </div>
+                  <div className="w-18 h-18 relative">
+                  {/* Conditional rendering based on client state */}
+                  {isClient ? (
+                    <Image
+                      src="/images/logo.png"
+                      alt="BK Logo"
+                      width={50}
+                      height={50}
+                      className="rounded-lg"
+                      />
+                    ) : (
+                    <div className="w-18 h-18 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                  )}
                   </div>
-                  <h1 className="text-3xl font-bold text-red-500">BKchat</h1>
+                    <h1 className="text-5xl font-bold text-red-500">BKchat</h1>
                 </div>
               </div>
-
-              <h2 className="text-xl font-bold mb-6">Welcome to BKChat!</h2>
+              <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
+              <p className="text-slate-700 mb-6">Please sign up to join with us</p>
 
               <form className="space-y-4">
                 <div className="space-y-2">
@@ -99,18 +123,7 @@ export default function SignupPage() {
               </form>
             </div>
 
-            {/* Right side with illustration */}
-            <div className="hidden md:flex items-center justify-center p-8 md:w-1/4">
-              <div className="w-full h-48 relative">
-                <Image
-                  src="/placeholder.svg?height=192&width=192"
-                  alt="People collaborating"
-                  width={192}
-                  height={192}
-                  className="object-contain"
-                />
-              </div>
-            </div>
+        
           </div>
         </div>
       </div>
