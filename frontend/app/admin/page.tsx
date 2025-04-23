@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image"
 import { Home, User, LayoutDashboard, Settings, Bell, LogOut, MoreHorizontal } from "lucide-react"
 
@@ -22,37 +22,112 @@ export default function AdminPage() {
     // In a real app, you would handle logout logic here (clear tokens, etc.)
     router.push("/")
   }
+  function roundNumber(num: number, decimalPlaces: number): number {
+    const factor = Math.pow(10, decimalPlaces);
+    return Math.round(num * factor) / factor;
+  }
 
   // Friend list data for USER tab
   const friends = [
-    { name: "Dac Hoang", totalMessages: 813, toxicMessages: 72, toxicRate: "8.8%" },
-    { name: "Tuan Nam", totalMessages: 645, toxicMessages: 210, toxicRate: "32.6%" },
-    { name: "Hoang Long", totalMessages: 404, toxicMessages: 60, toxicRate: "14.8%" },
-    { name: "Le Phu", totalMessages: 100, toxicMessages: 40, toxicRate: "4%" },
-    { name: "Tri Cuong", totalMessages: 38, toxicMessages: 14, toxicRate: "36.8%" },
-  ]
+    { name: "Dac Hoang", totalMessages: 813, toxicMessages: 72 },
+    { name: "Tuan Nam", totalMessages: 645, toxicMessages: 210 },
+    { name: "Hoang Long", totalMessages: 404, toxicMessages: 60 },
+    { name: "Le Phu", totalMessages: 100, toxicMessages: 40 },
+    { name: "Tri Cuong", totalMessages: 38, toxicMessages: 14 },
+  ].map(friend => ({
+    ...friend,
+    toxicRate: ((friend.toxicMessages / friend.totalMessages) * 100).toFixed(1) + "%"
+  }));
+
+  const totalMessages = friends.reduce((sum, friend) => sum + friend.totalMessages, 0);
+  const toxicMessages = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0);
+
+  // Define interfaces for ML data
+  interface ModelPerformance {
+    f1Score: number;
+    recall: number;
+    precision: number;
+    userFeedbackRate: number;
+  }
+
+  interface FeedbackAnalysis {
+    truePositive: number;
+    falseNegative: number;
+    falsePositive: number;
+    trueNegative: number;
+  }
+
+  interface MlData {
+    totalMessages: number;
+    toxicMessages: number;
+    userFeedback: {
+      toxic: number;
+      notToxic: number;
+    };
+    modelPerformance: ModelPerformance;
+    feedbackAnalysis: FeedbackAnalysis;
+  }
 
   // ML model data for DASHBOARD tab
-  const mlData = {
-    totalMessages: 2076,
-    toxicMessages: 396,
+  const mlData: MlData = {
+    totalMessages: totalMessages,
+    toxicMessages: toxicMessages,
     userFeedback: {
-      toxic: 50,
-      notToxic: 10,
+      toxic: 90,
+      notToxic: 30,
     },
-    modelPerformance: {
-      f1Score: "92.5%",
-      recall: "88.5%",
-      precision: "97.5%",
-      userFeedbackRate: "2.9%",
+    modelPerformance: { // Initialize with default values matching the interface
+      f1Score: 0,
+      recall: 0,
+      precision: 0,
+      userFeedbackRate: 0,
     },
-    feedbackAnalysis: {
-      trueNegative: "78.5%",
-      truePositive: "18.6%",
-      falseNegative: "2.4%",
-      falsePositive: "0.5%",
+    feedbackAnalysis: { // Initialize with default values matching the interface
+      truePositive: 0,
+      falseNegative: 0,
+      falsePositive: 0,
+      trueNegative: 0,
     },
-  }
+  };
+  
+  // Calculate
+  const total = mlData.totalMessages;
+
+  const totalFeedback = mlData.userFeedback.toxic + mlData.userFeedback.notToxic;
+  const userFeedbackRate = (totalFeedback / mlData.totalMessages) * 100;
+
+  // Assumptions for basic metrics
+  const falsePositive = mlData.userFeedback.notToxic;      // Not Toxic messages predicted as toxic 
+  const falseNegative = mlData.userFeedback.toxic;   // Toxic messages predicted as not toxic 
+  const truePositive = mlData.toxicMessages - falseNegative;
+  const trueNegative = mlData.totalMessages - mlData.toxicMessages - falsePositive;
+
+  // Calculate metrics
+  const precisionDenominator = truePositive + falsePositive;
+  const precision = precisionDenominator === 0 ? 0 : truePositive / precisionDenominator;
+
+  const recallDenominator = truePositive + falseNegative;
+  const recall = recallDenominator === 0 ? 0 : truePositive / recallDenominator;
+
+  const f1ScoreDenominator = precision + recall;
+  const f1Score = f1ScoreDenominator === 0 ? 0 : 2 * (precision * recall) / f1ScoreDenominator;
+  
+  // Update model performance with formatted percentages
+  mlData.modelPerformance = {
+    f1Score: roundNumber(f1Score * 100, 2),
+    recall: roundNumber(recall * 100, 2),
+    precision: roundNumber(precision * 100, 2),
+    userFeedbackRate: roundNumber(userFeedbackRate, 2),
+  };
+  
+  // Calculate percentages for pie chart
+  
+  mlData.feedbackAnalysis = {
+    truePositive: roundNumber((truePositive / total) * 100, 2),
+    falseNegative: roundNumber((falseNegative / total) * 100, 2),
+    falsePositive: roundNumber((falsePositive / total) * 100, 2),
+    trueNegative: roundNumber((trueNegative / total) * 100, 2),
+  };
 
   const toggleOptionMenu = (index: number) => {
     if (activeOptionMenu === index) {
@@ -278,46 +353,49 @@ export default function AdminPage() {
                     <div>
                       <div className="flex justify-between mb-1">
                         <span>F1 score:</span>
-                        <span>{mlData.modelPerformance.f1Score}</span>
+                        <span>{mlData.modelPerformance.f1Score}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                           className="bg-blue-500 h-2.5 rounded-full"
-                          style={{ width: mlData.modelPerformance.f1Score }}
+                          style={{ width: `${Math.min(100, Number(mlData.modelPerformance.f1Score))}%` }}
                         ></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between mb-1">
                         <span>Recall:</span>
-                        <span>{mlData.modelPerformance.recall}</span>
+                        <span>{mlData.modelPerformance.recall}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                           className="bg-blue-500 h-2.5 rounded-full"
-                          style={{ width: mlData.modelPerformance.recall }}
+                          style={{ width: `${Math.min(100, Number(mlData.modelPerformance.recall))}%` }}
                         ></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between mb-1">
                         <span>Precision:</span>
-                        <span>{mlData.modelPerformance.precision}</span>
+                        <span>{mlData.modelPerformance.precision}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                           className="bg-blue-500 h-2.5 rounded-full"
-                          style={{ width: mlData.modelPerformance.precision }}
+                          style={{ width: `${Math.min(100, Number(mlData.modelPerformance.precision))}%` }}
                         ></div>
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between mb-1">
                         <span>User feedback rate:</span>
-                        <span>{mlData.modelPerformance.userFeedbackRate}</span>
+                        <span>{mlData.modelPerformance.userFeedbackRate}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "2.9%" }}></div>
+                        <div 
+                          className="bg-blue-500 h-2.5 rounded-full" 
+                          style={{ width: `${Math.min(100, Number(mlData.modelPerformance.userFeedbackRate))}%` }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -330,40 +408,106 @@ export default function AdminPage() {
                     <div className="flex flex-wrap justify-center gap-4 mb-4">
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.trueNegative} TN</span>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.trueNegative}% TN</span>
                       </div>
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-yellow-300 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.truePositive} TP</span>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.truePositive}% TP</span>
                       </div>
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falseNegative} FN</span>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falseNegative}% FN</span>
                       </div>
                       <div className="flex items-center">
                         <div className="w-4 h-4 bg-red-500 rounded-full mr-2"></div>
-                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falsePositive} FP</span>
+                        <span className="text-sm font-medium">{mlData.feedbackAnalysis.falsePositive}% FP</span>
                       </div>
                     </div>
                     <div className="relative w-64 h-64 mx-auto">
-                      {/* SVG Pie Chart - Starting from top (90 degrees) */}
+                      {/* Fixed SVG Pie Chart */}
                       <svg viewBox="0 0 100 100" className="w-full h-full">
-                        {/* Segments calculated with precise arc commands */}
-
-                        {/* TN - Blue (78.5%) - 282.6 degrees */}
-                        <path d="M 50 50 L 50 10 A 40 40 0 0 1 50 90 A 40 40 0 0 1 13.4 34.4 Z" fill="#3b82f6" />
-
-                        {/* TP - Yellow (18.6%) - 66.96 degrees */}
-                        <path d="M 50 50 L 13.4 34.4 A 40 40 0 0 1 26.4 13.6 Z" fill="#fde047" />
-
-                        {/* FN - Green (2.4%) - 8.64 degrees */}
-                        <path d="M 50 50 L 26.4 13.6 A 40 40 0 0 1 34.4 10.8 Z" fill="#22c55e" />
-
-                        {/* FP - Red (0.5%) - 1.8 degrees */}
-                        <path d="M 50 50 L 34.4 10.8 A 40 40 0 0 1 50 10 Z" fill="#ef4444" />
-
-                        {/* White center circle */}
-                        <circle cx="50" cy="50" r="25" fill="white" />
+                        {(() => {
+                          // Use the numeric values directly
+                          const values = {
+                            trueNegative: mlData.feedbackAnalysis.trueNegative,
+                            truePositive: mlData.feedbackAnalysis.truePositive,
+                            falseNegative: mlData.feedbackAnalysis.falseNegative,
+                            falsePositive: mlData.feedbackAnalysis.falsePositive
+                          };
+                          
+                          // Calculate total for percentages
+                          const total = Object.values(values).reduce((sum, val) => sum + val, 0);
+                          
+                          // If total is 0, show empty chart
+                          if (total === 0) {
+                            return (
+                              <circle cx="50" cy="50" r="40" fill="#e5e7eb" />
+                            );
+                          }
+                          
+                          // Define colors for each segment
+                          const colors = {
+                            trueNegative: "#3b82f6", // Blue
+                            truePositive: "#fde047", // Yellow
+                            falseNegative: "#22c55e", // Green
+                            falsePositive: "#ef4444"  // Red
+                          };
+                          
+                          // Start angle from the top (270 degrees / -90 degrees in radians)
+                          let startAngle = -Math.PI / 2;
+                          const paths: React.JSX.Element[] = [];
+                          const radius = 40;
+                          const centerX = 50;
+                          const centerY = 50;
+                          
+                          // Helper function to create pie segment
+                          const createSegment = (value: number, color: string, index: number) => {
+                            if (value === 0) return null;
+                            
+                            // Calculate angle
+                            const angle = (value / 100) * (2 * Math.PI);
+                            const endAngle = startAngle + angle;
+                            
+                            // Calculate start and end points
+                            const startX = centerX + radius * Math.cos(startAngle);
+                            const startY = centerY + radius * Math.sin(startAngle);
+                            const endX = centerX + radius * Math.cos(endAngle);
+                            const endY = centerY + radius * Math.sin(endAngle);
+                            
+                            // Large arc flag is 1 if angle > π
+                            const largeArcFlag = angle > Math.PI ? 1 : 0;
+                            
+                            // Create SVG path
+                            const path = (
+                              <path 
+                                key={index}
+                                d={`M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`}
+                                fill={color}
+                              />
+                            );
+                            
+                            // Update startAngle for next segment
+                            startAngle = endAngle;
+                            
+                            return path;
+                          };
+                          
+                          // Create segments in order
+                          const segments = [
+                            { value: values.trueNegative, color: colors.trueNegative },
+                            { value: values.truePositive, color: colors.truePositive },
+                            { value: values.falseNegative, color: colors.falseNegative },
+                            { value: values.falsePositive, color: colors.falsePositive }
+                          ];
+                          
+                          // Generate paths for each segment
+                          segments.forEach((segment, index) => {
+                            const path = createSegment(segment.value, segment.color, index);
+                            if (path) paths.push(path);
+                          });
+                          
+                          return paths;
+                        })()}
                       </svg>
                     </div>
                   </div>
