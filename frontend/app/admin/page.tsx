@@ -97,18 +97,30 @@ export default function AdminPage() {
   const userFeedbackRate = (totalFeedback / mlData.totalMessages) * 100;
 
   // Assumptions for basic metrics
-  const falsePositive = mlData.userFeedback.notToxic;      // Not Toxic messages predicted as toxic 
-  const falseNegative = mlData.userFeedback.toxic;   // Toxic messages predicted as not toxic 
-  const truePositive = mlData.toxicMessages - falseNegative;
-  const trueNegative = mlData.totalMessages - mlData.toxicMessages - falsePositive;
+  // False positives - messages the model predicted as toxic but users say are not toxic
+  const falsePositive = mlData.userFeedback.notToxic;
+
+  // False negatives - messages the model predicted as not toxic but users say are toxic
+  const falseNegative = mlData.userFeedback.toxic;
+
+  // True positives - messages the model correctly predicted as toxic
+  // Total toxic predictions minus false positives
+  const truePositive = mlData.toxicMessages - falsePositive;
+
+  // True negatives - messages the model correctly predicted as not toxic
+  // Total messages minus toxic predictions minus false negatives
+  const trueNegative = mlData.totalMessages - mlData.toxicMessages - falseNegative;
 
   // Calculate metrics
+  // Precision = TP / (TP + FP)
   const precisionDenominator = truePositive + falsePositive;
   const precision = precisionDenominator === 0 ? 0 : truePositive / precisionDenominator;
 
+  // Recall = TP / (TP + FN)
   const recallDenominator = truePositive + falseNegative;
   const recall = recallDenominator === 0 ? 0 : truePositive / recallDenominator;
 
+  // F1 Score = 2 * (precision * recall) / (precision + recall)
   const f1ScoreDenominator = precision + recall;
   const f1Score = f1ScoreDenominator === 0 ? 0 : 2 * (precision * recall) / f1ScoreDenominator;
   
