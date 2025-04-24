@@ -30,6 +30,13 @@ interface Message {
   userFeedback?: "toxic" | "not_toxic" | null
 }
 
+interface CurrentUser {
+  _id: string
+  name: string
+  username: string
+  avatar?: string
+}
+
 export default function MainPage() {
   const [selectedContact, setSelectedContact] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState("")
@@ -56,6 +63,7 @@ export default function MainPage() {
   const searchDropdownRef = useRef<HTMLDivElement>(null);
 
   const [conversations, setConversations] = useState<Record<string, Message[]>>({})
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
   // Fetch contacts when component mounts
   useEffect(() => {
@@ -101,6 +109,31 @@ export default function MainPage() {
     }
 
     fetchContacts()
+  }, [])
+
+  // Fetch current user data
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        // Get user data from localStorage
+        const userData = localStorage.getItem('user')
+        if (!userData) {
+          throw new Error('No user data found')
+        }
+
+        const user = JSON.parse(userData)
+        setCurrentUser({
+          _id: user._id,
+          name: user.name,
+          username: user.username
+        })
+        
+      } catch (error) {
+        console.error('Error getting current user:', error)
+      }
+    }
+
+    fetchCurrentUser()
   }, [])
 
   // Fetch messages when a contact is selected
@@ -259,7 +292,7 @@ export default function MainPage() {
       // Add the new message to the local state
       const newMessage = {
         id: Date.now().toString(),
-        senderId: "current-user",
+        senderId: '6809c72a9ea8f2aa0c388bbc', // Current user's ID
         text: messageInput,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isEmoji: false,
@@ -344,12 +377,45 @@ export default function MainPage() {
     setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
   }
   
-  const handleDeleteMessage = (messageId: string) => {
-    setMessages((prevMessages) => 
-      prevMessages.filter((message) => message.id !== messageId)
-    )
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('You need to be logged in to delete messages')
+        return
+      }
 
-    setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
+      // First confirm with the user
+      if (!window.confirm('Are you sure you want to delete this message?')) {
+        return
+      }
+
+      // Call API to delete message
+      const response = await fetch(`http://localhost:5000/api/chat/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Failed to delete message (${response.status})`)
+      }
+
+      // If successful, update local state
+      setMessages((prevMessages) => 
+        prevMessages.filter((message) => message.id !== messageId)
+      )
+
+      // Close the option menu
+      setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
+
+    } catch (error) {
+      console.error('Error deleting message:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete message. Please try again.')
+    }
   }
   
   // Add this state for client-side rendering
@@ -493,8 +559,7 @@ export default function MainPage() {
         <div className="p-3 border-t flex items-center justify-between">
           <Link href="/admin" className="flex items-center gap-3">
             <div className="w-12 h-12 relative">
-              {/* Conditional rendering based on client state */}
-              {isClient ? (
+              {isClient && currentUser ? (
                 <Image
                   src="/images/profile.png"
                   alt="profile"
@@ -503,12 +568,12 @@ export default function MainPage() {
                   className="rounded-lg"
                 />
               ) : (
-                <div className="w-12 h-12 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
+                <div className="w-12 h-12 bg-gray-100 rounded-lg"></div>
               )}
             </div>
             <div>
-              <p className="text-sm font-medium">Cong Minh</p>
-              <p className="text-xs text-gray-500">@tcminh.sdh24</p>
+              <p className="text-sm font-medium">{currentUser?.name || ''}</p>
+              <p className="text-xs text-gray-500">@{currentUser?.username || ''}</p>
             </div>
           </Link>
         </div>
@@ -544,29 +609,66 @@ export default function MainPage() {
             ) : (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div key={message.id} className="flex justify-start">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
-                      <Image
-                        src={selectedContactData?.avatar || "/avatars/avatar.jpeg"}
-                        alt={selectedContactData?.name || "Contact"}
-                        width={32}
-                        height={32}
-                      />
-                    </div>
-                    <div className="flex flex-col relative group">
-                      <div
-                        className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative bg-gray-100 text-gray-900 ${
-                          message.isEmoji ? "text-2xl bg-transparent px-0" : ""
-                        }`}
-                      >
-                        <span className="flex-1">{message.text}</span>
-                        <button
-                          className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
-                          onClick={(e) => handleMessageOptions(e, message.id)}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                  <div
+                    key={message.id}
+                    className={`flex ${message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "justify-end" : "justify-start"}`}
+                  >
+                    {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
+                        <Image
+                          src={selectedContactData?.avatar || "/avatars/avatar.jpeg"}
+                          alt={selectedContactData?.name || "Contact"}
+                          width={32}
+                          height={32}
+                        />
                       </div>
+                    )}
+                    <div className="flex flex-col relative group">
+                      <div className="flex items-center">
+                        {/* For current user messages, show status and button on the left */}
+                        {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
+                          <div className="flex items-center absolute -left-24">
+                            {message.userFeedback && (
+                              <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
+                                Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                              </span>
+                            )}
+                            <button
+                              className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                              onClick={(e) => handleMessageOptions(e, message.id)}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        <div
+                          className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
+                            message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
+                          } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
+                        >
+                          <span className="flex-1">{message.text}</span>
+                        </div>
+
+                        {/* For contact messages, show button and status on the right */}
+                        {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
+                          <div className="flex items-center absolute -right-24">
+                            <button
+                              className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                              onClick={(e) => handleMessageOptions(e, message.id)}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                            {message.userFeedback && (
+                              <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
+                                Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Timestamp and toxic warning */}
                       <div className="flex items-center mt-1">
                         <span className="text-xs text-gray-500">{message.timestamp}</span>
                         {message.isToxic && (
@@ -579,15 +681,18 @@ export default function MainPage() {
                             </span>
                           </div>
                         )}
-                        {message.userFeedback && (
-                          <span
-                            className={`ml-2 text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}
-                          >
-                            • {message.userFeedback === "toxic" ? "Marked as toxic" : "Marked as not toxic"}
-                          </span>
-                        )}
                       </div>
                     </div>
+                    {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden ml-2 flex-shrink-0">
+                        <Image
+                          src="/images/profile.png"
+                          alt="You"
+                          width={32}
+                          height={32}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />

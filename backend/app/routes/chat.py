@@ -144,3 +144,21 @@ def get_messages_by_contact(contact_id):
         return jsonify({'messages': formatted_messages}), 200
     except Exception as e:
         return jsonify({'message': str(e)}), 500
+
+# Delete message endpoint
+@chat_bp.route('/messages/<message_id>', methods=['DELETE'])
+def delete_message(message_id):
+    try:
+        # Convert string ID to ObjectId
+        message_id = ObjectId(message_id)
+        
+        # Delete the message
+        result = mongo.db.messages.delete_one({'_id': message_id})
+        
+        if result.deleted_count > 0:
+            return jsonify({'message': 'Message deleted successfully'}), 200
+        else:
+            return jsonify({'message': 'Message not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
