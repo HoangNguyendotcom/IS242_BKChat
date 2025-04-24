@@ -624,53 +624,49 @@ export default function MainPage() {
                       </div>
                     )}
                     <div className="flex flex-col relative group">
-                      <div className="flex items-center">
-                        {/* For current user messages, show status and button on the left */}
-                        {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
-                          <div className="flex items-center absolute -left-24">
-                            {message.userFeedback && (
-                              <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
-                                Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
-                              </span>
-                            )}
-                            <button
-                              className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
-                              onClick={(e) => handleMessageOptions(e, message.id)}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-
-                        <div
-                          className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
-                            message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
-                          } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
-                        >
-                          <span className="flex-1">{message.text}</span>
-                        </div>
-
-                        {/* For contact messages, show button and status on the right */}
-                        {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
-                          <div className="flex items-center absolute -right-24">
-                            <button
-                              className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
-                              onClick={(e) => handleMessageOptions(e, message.id)}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                            {message.userFeedback && (
-                              <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
-                                Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                      <div
+                        className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
+                          message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
+                        } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
+                      >
+                        <span className="flex-1">{message.text}</span>
                       </div>
 
-                      {/* Timestamp and toxic warning */}
+                      {/* Toxic status and timestamp */}
                       <div className="flex items-center mt-1">
-                        <span className="text-xs text-gray-500">{message.timestamp}</span>
+                        <div className="flex items-center">
+                          {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
+                            <>
+                              {message.userFeedback && (
+                                <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
+                                  Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                                </span>
+                              )}
+                              <button
+                                className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                                onClick={(e) => handleMessageOptions(e, message.id)}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
+                            <>
+                              <button
+                                className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                                onClick={(e) => handleMessageOptions(e, message.id)}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                              {message.userFeedback && (
+                                <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
+                                  Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500 ml-2">{message.timestamp}</span>
                         {message.isToxic && (
                           <div className="ml-2">
                             <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
