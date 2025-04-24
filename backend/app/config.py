@@ -18,8 +18,8 @@ REDIS_URL = os.environ.get('REDIS_URL')
 
 # JWT configuration
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)))
-JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES', 2592000)))
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600).split('#')[0].strip()))
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES', 2592000).split('#')[0].strip()))
 
 # CORS settings
 CORS_HEADERS = 'Content-Type'

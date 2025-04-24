@@ -16,22 +16,31 @@ export default function Home() {
     
     // Check connection to Flask backend
     fetch('http://localhost:5000/')
-      .then(response => response.json())
+      .then(response => {
+        if (response.ok) {
+          return response.json()
+          .catch(() => {
+            return { message: "BKchat API is running" };
+          });
+        } else {
+          throw new Error('API connection failed');
+        }
+      })
       .then(data => {
         setApiStatus({ 
           connected: true, 
           message: data.message
-        })
-        console.log("Connected to Flask API:", data)
+        });
+        console.log("Connected to Flask API:", data);
       })
       .catch(error => {
-        console.error("Failed to connect to Flask API:", error)
+        console.error("Failed to connect to Flask API:", error);
         setApiStatus({
           connected: false,
           message: "API connection failed"
-        })
-      })
-  }, [])
+        });
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">

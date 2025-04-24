@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +12,6 @@ interface Contact {
   id: string
   name: string
   username: string
-  avatar: string
   lastMessage: string
   date: string
   reacted?: string
@@ -31,142 +29,63 @@ interface Message {
 }
 
 export default function MainPage() {
-  const [selectedContact, setSelectedContact] = useState<string | null>(null) // Start with no contact selected
-  const [messageInput, setMessageInput] = useState("")
+  const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [messageInput, setMessageInput] = useState("");
   const optionsMenuRef = useRef<HTMLDivElement>(null);
   const [optionMenu, setOptionMenu] = useState<{
-    visible: boolean
-    messageId: string | null
-    position: { top: number; left: number }
+    visible: boolean;
+    messageId: string | null;
+    position: { top: number; left: number };
   }>({
     visible: false,
     messageId: null,
-    position: { top: 0, left: 0 },
-  })
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  
+    position: { top: 0, left: 0 }
+  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const defaultAvatar = "/avatars/avatar.jpeg";
+
   // New search functionality
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDropdownRef = useRef<HTMLDivElement>(null);
 
-  const contacts: Contact[] = [
-    {
-      id: "1",
-      name: "Dac Hoang",
-      username: "@ndhoang.sdh241",
-      avatar: "/avatars/avatar.jpeg",
-      lastMessage: "Dac Hoang reacted with",
-      date: "Mar 23",
-      reacted: "❤️",
-    },
-    {
-      id: "2",
-      name: "Tri Cuong",
-      username: "@ntcuong.sdh241",
-      avatar: "/avatars/avatar2.png",
-      lastMessage: "Anh ăn cơm chưa?",
-      date: "Mar 24",
-    },
-    {
-      id: "3",
-      name: "Tuan Nam",
-      username: "@ntnam.sdh24",
-      avatar: "/avatars/avatar3.avif",
-      lastMessage: "Làm j đấy?",
-      date: "Mar 25",
-    },
-    {
-      id: "4",
-      name: "Hoang Long",
-      username: "@nbhlong.sdh24",
-      avatar: "/avatars/avatar4.png",
-      lastMessage: "Hello mrPip",
-      date: "Mar 25",
-    },
-    {
-      id: "5",
-      name: "Le Phu",
-      username: "@tlphu.sdh24",
-      avatar: "/avatars/avatar5.png",
-      lastMessage: "Oke em",
-      date: "Mar 25",
-    },
-    {
-      id: "6",
-      name: "Hoang Minh",
-      username: "@vhminh.sdh24",
-      avatar: "/avatars/avatar2.png",
-      lastMessage: "Hoang Minh reacted with",
-      date: "Mar 25",
-      reactedWith: "👍",
-    },
-  ]
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [conversations, setConversations] = useState<Record<string, Message[]>>({});
 
-  // Sample conversation with Dac Hoang
-  const [conversations, setConversations] = useState<Record<string, Message[]>>({
-    "1": [
-      {
-        id: "1",
-        senderId: "1", // Dac Hoang
-        text: "Ê m",
-        timestamp: "Sat 5:10 AM",
-        isToxic: false,
-      },
-      {
-        id: "2",
-        senderId: "1", // Dac Hoang
-        text: "Đang làm gì đó?",
-        timestamp: "Sat 5:10 AM",
-        isToxic: false,
-      },
-      {
-        id: "3",
-        senderId: "1", // Dac Hoang
-        text: "😊 😊 😊",
-        timestamp: "Sat 5:10 AM",
-        isEmoji: true,
-        isToxic: false,
-      },
-      {
-        id: "4",
-        senderId: "current-user", // Current user
-        text: "Có gì nói lẹ đi",
-        timestamp: "Sat 5:15 PM",
-        isToxic: false,
-      },
-      {
-        id: "5",
-        senderId: "current-user", // Current user
-        text: "Đang bận lắm",
-        timestamp: "Sat 5:15 PM",
-        isToxic: false,
-      },
-      {
-        id: "6",
-        senderId: "current-user", // Current user
-        text: "👍 👍",
-        timestamp: "Sat 5:15 PM",
-        isEmoji: true,
-        isToxic: false,
-      },
-      {
-        id: "7",
-        senderId: "current-user", // Current user
-        text: "Thêm m đó",
-        timestamp: "Sat 5:17 PM",
-        isToxic: true,
-      },
-      {
-        id: "8",
-        senderId: "1", // Dac Hoang
-        text: "Bị điên hả, nhắn hỏi thăm thôi",
-        timestamp: "Sat 5:17 PM",
-        isToxic: true,
-      },
-    ],
-  })
+  useEffect(() => {
+        const fetchData = async () => {
+      try {
+        let token = null;
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          // Does this cookie string begin with the name we want?
+          if (cookie.startsWith('token=')) {
+            token = cookie.substring('token='.length);
+            break;
+          }
+        }
+        if (!token) {
+          console.error('Token not found in cookie');
+          return;
+        }
+        const response = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        setContacts(data.contacts);
+        setConversations(data.conversations);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Function to filter contacts based on search query
   const getFilteredContacts = () => {
@@ -272,7 +191,6 @@ export default function MainPage() {
     e.preventDefault(); 
     
     // Critical fix: Stop the event from propagating to document level
-    // which would trigger the handleClickOutside function
     e.nativeEvent.stopImmediatePropagation();
     
     const target = e.currentTarget as HTMLElement;
@@ -310,8 +228,8 @@ export default function MainPage() {
         }
         
         // Check if menu would be off the left of the screen
-        if (left < window.scrollX) {
-          left = window.scrollX + 10; // 10px margin
+        if (left < window.scrollY) {
+          left = window.scrollY + 10; // 10px margin
         }
         
         // Update with adjusted position
@@ -440,7 +358,7 @@ export default function MainPage() {
                   >
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <Image src={contact.avatar || "/avatars/avatar.jpg"} alt={contact.name} width={32} height={32} />
+                        <Image src={defaultAvatar} alt={contact.name} width={32} height={32} />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -470,7 +388,7 @@ export default function MainPage() {
             >
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
-                  <Image src={contact.avatar || "/avatars/avatar.jpg"} alt={contact.name} width={40} height={40} />
+                  <Image src={"/avatars/avatar.jpg"} alt={contact.name} width={40} height={40} />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
@@ -521,7 +439,7 @@ export default function MainPage() {
             <div className="flex-1 flex items-center">
               <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden mr-3">
                 <Image
-                  src={selectedContactData.avatar || "/placeholder.svg"}
+                  src={defaultAvatar}
                   alt={selectedContactData.name}
                   width={40}
                   height={40}
@@ -545,7 +463,7 @@ export default function MainPage() {
                   {message.senderId !== "current-user" && (
                     <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
                       <Image
-                        src={selectedContactData.avatar || "/avatar/avatar1.jpg"}
+                        src={defaultAvatar}
                         alt={selectedContactData.name}
                         width={32}
                         height={32}
@@ -567,9 +485,9 @@ export default function MainPage() {
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       )}
-                      
+
                       <span className="flex-1">{message.text}</span>
-                      
+
                       {/* For other user messages, show options button on the right */}
                       {message.senderId !== "current-user" && (
                         <button
@@ -585,7 +503,7 @@ export default function MainPage() {
                       {message.userFeedback && (
                         <span
                           className={`ml-2 text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}
-                          >
+                        >
                           • {message.userFeedback === "toxic" ? "Marked as toxic" : "Marked as not toxic"}
                         </span>
                       )}
@@ -642,7 +560,7 @@ export default function MainPage() {
             </button>
             <div className="flex-1 mx-2">
               <Input
-                placeholder="Nói bậy bạ là t chém m luôn đó"
+                placeholder="Input something..."
                 className="border-0 focus-visible:ring-0"
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
@@ -671,7 +589,6 @@ export default function MainPage() {
           </div>
         </div>
       )}
-
     </div>
   )
 }

@@ -28,24 +28,27 @@ def create_app(config=None):
         app.config.from_object(config)
     
     # Configure MongoDB
-    app.config.setdefault('MONGO_URI', 'mongodb://localhost:27017/flask_app')
-    
+    app.config["MONGO_URI"] = f"mongodb://{os.getenv('MONGO_HOST', 'localhost')}:{os.getenv('MONGO_PORT', '27017')}/bkchat"
+    mongo.init_app(app)
+
     # Configure Redis
     redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/0')
-    
+
     # Enable CORS for frontend
-    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
-    
+    CORS(app, resources={
+    r"/api/*": {"origins": "http://localhost:3000"},
+    r"/": {"origins": "http://localhost:3000"}
+    })
+
     # Initialize extensions with app
     global redis_client
-    mongo.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
     redis_client = redis.from_url(redis_url)
-    
+
     # Register routes
     with app.app_context():
         from app.routes import register_routes
         register_routes(app)
-    
+
     return app

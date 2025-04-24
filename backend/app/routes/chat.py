@@ -1,6 +1,7 @@
 # app/routes/chat.py
 from flask import request, jsonify
 from . import chat_bp
+from app import mongo
 
 # Get all messages endpoint
 @chat_bp.route('/messages', methods=['GET'])
@@ -37,3 +38,82 @@ def get_conversation(conversation_id):
 def delete_conversation(conversation_id):
     # Reserved for future implementation
     pass
+
+import jwt
+from app.models.message import Message
+from app.models.user import User
+from bson import ObjectId
+
+@chat_bp.route('/create_messages', methods=['POST'])
+def create_messages():
+    data = request.get_json()
+    messages = data.get('messages')
+
+    if not messages:
+        return jsonify({'message': 'Messages are required'}), 400
+
+    for message in messages:
+        senderId = message.get('senderId')
+        text = message.get('text')
+        timestamp = message.get('timestamp')
+        isEmoji = message.get('isEmoji', False)
+
+        # Assuming senderId is tcminh.sdh241 and receiverId is ndhoang.sdh241
+        sender_user = User.find_by_username("tcminh.sdh241")
+        receiver_user = User.find_by_username("ndhoang.sdh241")
+
+        if not sender_user or not receiver_user:
+            return jsonify({'message': 'Sender or receiver not found'}), 400
+
+        sender_id = str(sender_user['_id'])
+        receiver_id = str(receiver_user['_id'])
+
+        Message.create(sender_id, receiver_id, text, isEmoji)
+
+    return jsonify({'message': 'Messages created successfully'}), 201
+
+@chat_bp.route('/get_contacts_and_conversations', methods=['GET'])
+def get_contacts_and_conversations():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'message': 'Authorization header is required'}), 400
+
+    try:
+        token = auth_header.split(' ')[1]
+        decoded_token = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
+        username = decoded_token.get('username')
+    except Exception as e:
+        return jsonify({'message': 'Invalid token'}), 400
+
+    if not username:
+        return jsonify({'message': 'Username not found in token'}), 400
+
+    user = User.find_by_username(username)
+
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    friend_usernames = user.get('friends', [])
+    friends = []
+    for friend_username in friend_usernames:
+        try:
+            friend = User.find_by_username(friend_username)
+            if friend:
+                friend['_id'] = str(friend['_id'])
+                friends.append(friend)
+        except Exception as e:
+            print(f"Error finding friend {friend_username}: {e}")
+
+    conversations = {}
+    for message in mongo.db.messages.find():
+        message['_id'] = str(message['_id'])
+        message['senderId'] = str(message['senderId'])
+        message['receiverId'] = str(message['receiverId'])
+        senderId = message['senderId']
+        receiverId = message['receiverId']
+        conversationId = str(senderId) + '_' + str(receiverId)
+        if conversationId not in conversations:
+            conversations[conversationId] = []
+        conversations[conversationId].append(message)
+
+    return jsonify({'contacts': friends, 'conversations': conversations}), 200

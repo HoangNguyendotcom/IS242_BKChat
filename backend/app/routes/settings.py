@@ -32,6 +32,18 @@ def update_notifications():
     # Reserved for future implementation
     pass
 
+# Update avatar endpoint
+@settings_bp.route('/avatar', methods=['PUT'])
+def update_avatar():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({"message": "Username is required"}), 400
+    from app.models.user import User
+    if User.update_avatar(username):
+        return jsonify({"message": "Avatar updated successfully"}), 200
+    else:
+        return jsonify({"message": "User not found"}), 404
+
 # Delete account endpoint
 @settings_bp.route('/account', methods=['DELETE'])
 def delete_account():

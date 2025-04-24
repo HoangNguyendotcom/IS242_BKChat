@@ -1,40 +1,4 @@
-version: '3.8'
-
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
-    env_file:
-      - .env
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - mongodb
-      - redis
-    networks:
-      - app-network
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-    env_file:
-      - .env
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      - backend
-    networks:
-      - app-network
-    restart: unless-stopped
-
   mongodb:
     image: mongo:latest
     ports:

@@ -1,39 +1,19 @@
-# app/routes/friends.py
 from flask import request, jsonify
 from . import friends_bp
+from app.models.user import User
 
-# Get all friends endpoint
-@friends_bp.route('/', methods=['GET'])
-def get_friends():
-    # Reserved for future implementation
-    pass
-
-# Add friend endpoint
-@friends_bp.route('/', methods=['POST'])
+@friends_bp.route('/add_friend', methods=['POST'])
 def add_friend():
-    # Reserved for future implementation
-    pass
+    data = request.get_json()
+    username = data.get('username')
+    friend_username = data.get('friend_username')
 
-# Remove friend endpoint
-@friends_bp.route('/<friend_id>', methods=['DELETE'])
-def remove_friend(friend_id):
-    # Reserved for future implementation
-    pass
+    if not username or not friend_username:
+        return jsonify({'message': 'Username and friend_username are required'}), 400
 
-# Get friend requests endpoint
-@friends_bp.route('/requests', methods=['GET'])
-def get_friend_requests():
-    # Reserved for future implementation
-    pass
+    success = User.add_friend(username, friend_username)
 
-# Accept friend request endpoint
-@friends_bp.route('/requests/<request_id>/accept', methods=['POST'])
-def accept_friend_request(request_id):
-    # Reserved for future implementation
-    pass
-
-# Reject friend request endpoint
-@friends_bp.route('/requests/<request_id>/reject', methods=['POST'])
-def reject_friend_request(request_id):
-    # Reserved for future implementation
-    pass
+    if success:
+        return jsonify({'message': 'Friend added successfully'}), 200
+    else:
+        return jsonify({'message': 'Could not add friend'}), 400

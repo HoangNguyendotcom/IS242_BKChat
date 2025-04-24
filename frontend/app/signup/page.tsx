@@ -3,19 +3,141 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { Eye } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useState } from "react" // Add this import
-
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function SignupPage() {
-  // Add this state for client-side rendering
-  const [isClient, setIsClient] = useState(false)
-  
-  // Add this effect to set isClient to true after mounting
+  // Client-side rendering state
+  const [isClient, setIsClient] = useState(false);
+
+  // Form data state
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: ''
+  });
+
+  // Form validation and UI states
+  const [errors, setErrors] = useState<any>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [signupMessage, setSignupMessage] = useState({ type: '', message: '' });
+
+  const router = useRouter();
+
+  // Set isClient to true after mounting
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
+
+  // Handle input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev: any) => ({
+      ...prev,
+      [id]: value
+    }));
+
+    // Clear errors when typing
+    if (errors[id]) {
+      setErrors((prev: any) => ({
+        ...prev,
+        [id]: ''
+      }));
+    }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(prev => !prev);
+  };
+
+  // Validate form data
+  const validateForm = () => {
+    const newErrors: any = {};
+
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
+
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
+
+    // Password validation
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setSignupMessage({ type: '', message: '' });
+
+    try {
+      // Send data to backend
+      const response = await fetch('http://localhost:5000/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Successful signup
+        setSignupMessage({
+          type: 'success',
+          message: data.message || 'Signup successful! Redirecting to login...'
+        });
+
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else {
+        // Failed signup
+        setSignupMessage({
+          type: 'error',
+          message: data.message || 'Signup failed. Please try again.'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error during signup:', error);
+      setSignupMessage({
+        type: 'error',
+        message: 'Connection error. Please check your internet connection.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
@@ -31,59 +153,87 @@ export default function SignupPage() {
           <div className="relative z-10 flex flex-col md:flex-row">
             {/* Left side with logo */}
             <div className="p-8 flex items-center justify-center md:w-2/5">
-                          <div className="w-72 h-72 relative">
-                            {/* Conditional rendering based on client state */}
-                            {isClient ? (
-                              <Image
-                                src="/images/bk-logo.png"
-                                alt="BK Logo"
-                                width={300}
-                                height={300}
-                                className="rounded-lg"
-                              />
-                            ) : (
-                              <div className="w-72 h-72 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
-                            )}
-                          </div>
-                        </div>
+              <div className="w-72 h-72 relative">
+                {isClient ? (
+                  <Image
+                    src="/images/bk-logo.png"
+                    alt="BK Logo"
+                    width={300}
+                    height={300}
+                    className="rounded-lg"
+                  />
+                ) : (
+                  <div className="w-72 h-72 bg-gray-100 rounded-lg"></div>
+                )}
+              </div>
+            </div>
 
             {/* Center signup form */}
             <div className="p-8 md:w-2/4 border border-blue-100 rounded-lg mx-4 my-6 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center justify-center mb-6">
                 <div className="flex items-center">
                   <div className="w-18 h-18 relative">
-                  {/* Conditional rendering based on client state */}
-                  {isClient ? (
-                    <Image
-                      src="/images/logo.png"
-                      alt="BK Logo"
-                      width={50}
-                      height={50}
-                      className="rounded-lg"
+                    {isClient ? (
+                      <Image
+                        src="/images/logo.png"
+                        alt="BK Logo"
+                        width={50}
+                        height={50}
+                        className="rounded-lg"
                       />
                     ) : (
-                    <div className="w-18 h-18 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
-                  )}
+                      <div className="w-18 h-18 bg-gray-100 rounded-lg"></div>
+                    )}
                   </div>
-                    <h1 className="text-5xl font-bold text-red-500">BKchat</h1>
+                  <h1 className="text-5xl font-bold text-red-500">BKchat</h1>
                 </div>
               </div>
               <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
               <p className="text-slate-700 mb-6">Please sign up to join with us</p>
 
-              <form className="space-y-4">
+              {/* Show signup message if exists */}
+              {signupMessage.message && (
+                <div className={`p-3 mb-4 text-sm rounded ${
+                  signupMessage.type === 'success' 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {signupMessage.message}
+                </div>
+              )}
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <label htmlFor="username" className="block text-sm font-medium">
                     Username
                   </label>
-                  <Input id="username" placeholder="admin" />
+                  <Input 
+                    id="username" 
+                    placeholder="admin" 
+                    value={formData.username}
+                    onChange={handleChange}
+                    className={errors.username ? "border-red-500" : ""}
+                  />
+                  {errors.username && (
+                    <p className="text-red-500 text-xs mt-1">{errors.username}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="email" className="block text-sm font-medium">
                     Email
                   </label>
-                  <Input id="email" type="email" placeholder="admin@hcmut.edu.vn" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="admin@hcmut.edu.vn" 
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={errors.email ? "border-red-500" : ""}
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -91,18 +241,39 @@ export default function SignupPage() {
                     Password
                   </label>
                   <div className="relative">
-                    <Input id="password" type="password" placeholder="••••••••" />
+                    <Input 
+                      id="password" 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={errors.password ? "border-red-500" : ""}
+                    />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      aria-label="Show password"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      onClick={togglePasswordVisibility}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      <Eye className="h-4 w-4" />
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
+                  {errors.password && (
+                    <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                  )}
                 </div>
 
-                <Button className="w-full bg-blue-500 hover:bg-blue-600">Sign Up</Button>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-500 hover:bg-blue-600" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Signing Up..." : "Sign Up"}
+                </Button>
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
@@ -122,8 +293,6 @@ export default function SignupPage() {
                 </div>
               </form>
             </div>
-
-        
           </div>
         </div>
       </div>

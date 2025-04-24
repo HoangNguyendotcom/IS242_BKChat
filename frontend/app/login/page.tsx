@@ -3,19 +3,70 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { Eye } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useState } from "react" // Add this import
-
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
-  // Add this state for client-side rendering
+  // Client-side rendering state
   const [isClient, setIsClient] = useState(false)
   
-  // Add this effect to set isClient to true after mounting
+  // Form state
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const router = useRouter();
+
+  // Set isClient to true after mounting
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Login successful
+        console.log("Login successful:", data);
+        // Save user data or token if needed
+        localStorage.setItem('token', data.access_token);
+
+        // Redirect to main page
+        router.push('/main');
+      } else {
+        // Login failed
+        setError(data.message || "Login failed. Please check your credentials.");
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError("Connection error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle password visibility
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword)
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
@@ -72,12 +123,24 @@ export default function Home() {
               <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
               <p className="text-slate-700 mb-6">Please log in to continue</p>
 
-              <form className="space-y-4">
+              {error && (
+                <div className="p-3 mb-4 bg-red-100 text-red-700 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <label htmlFor="username" className="block text-sm font-medium">
                     Username
                   </label>
-                  <Input id="username" placeholder="admin" />
+                  <Input 
+                    id="username" 
+                    placeholder="admin" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -85,19 +148,31 @@ export default function Home() {
                     Password
                   </label>
                   <div className="relative">
-                    <Input id="password" type="password" placeholder="••••••••" />
+                    <Input 
+                      id="password" 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      aria-label="Show password"
+                      onClick={togglePasswordVisibility}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      <Eye className="h-4 w-4" />
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
 
-                <Button className="w-full bg-blue-500 hover:bg-blue-600" asChild>
-                  <Link href="/main">Log In</Link>
+                <Button 
+                  className="w-full bg-blue-500 hover:bg-blue-600" 
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? "Logging in..." : "Log In"}
                 </Button>
 
                 <div className="relative my-6">

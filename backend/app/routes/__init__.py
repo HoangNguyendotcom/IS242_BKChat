@@ -3,10 +3,10 @@ from flask import Blueprint, jsonify
 
 # Create blueprints for different sections of the API
 api = Blueprint('api', __name__, url_prefix='/api')
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
-friends_bp = Blueprint('friends', __name__, url_prefix='/api/friends')
-settings_bp = Blueprint('settings', __name__, url_prefix='/api/settings')
+auth_bp = Blueprint('auth', __name__)
+chat_bp = Blueprint('chat', __name__)
+friends_bp = Blueprint('friends', __name__)
+settings_bp = Blueprint('settings', __name__)
 
 def register_routes(app):
     """Register all route blueprints with the Flask app"""
@@ -22,20 +22,21 @@ def register_routes(app):
                 "version": "1.0.0"
             }
         })
-    
+
     # Import routes from other modules
     from . import auth, chat, friends, settings
-    
+    from .friends import friends_bp
+    from .chat import chat_bp
+
     # Register blueprints with the app
-    app.register_blueprint(api)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(chat_bp)
-    app.register_blueprint(friends_bp)
-    app.register_blueprint(settings_bp)
-    
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(friends_bp, url_prefix='/api/friends')
+    app.register_blueprint(settings_bp, url_prefix='/api/settings')
+
     # Register error handlers
     register_error_handlers(app)
-    
+
     return app
 
 def register_error_handlers(app):
