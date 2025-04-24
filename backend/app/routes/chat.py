@@ -12,8 +12,23 @@ def get_messages():
 # Send message endpoint
 @chat_bp.route('/messages', methods=['POST'])
 def send_message():
-    # Reserved for future implementation
-    pass
+    data = request.get_json()
+    receiver_id = data.get('receiverId')
+    text = data.get('text')
+    is_emoji = data.get('isEmoji', False)
+
+    if not receiver_id or not text:
+        return jsonify({'message': 'Receiver ID and text are required'}), 400
+
+    current_user = User.find_by_username("tcminh.sdh241")  # This should be replaced with the actual logged-in user
+    if not current_user:
+        return jsonify({'message': 'User not found'}), 404
+
+    try:
+        message_id = Message.create(str(current_user['_id']), receiver_id, text, is_emoji)
+        return jsonify({'message': 'Message sent successfully', 'messageId': message_id}), 201
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
 
 # Get conversation history endpoint
 @chat_bp.route('/conversations', methods=['GET'])
@@ -103,3 +118,29 @@ def get_contacts_and_conversations():
         conversations[conversationId].append(message)
 
     return jsonify({'contacts': friends, 'conversations': conversations}), 200
+
+@chat_bp.route('/messages/<contact_id>', methods=['GET'])
+def get_messages_by_contact(contact_id):
+    current_user = User.find_by_username("tcminh.sdh241")  # This should be replaced with the actual logged-in user
+    if not current_user:
+        return jsonify({'message': 'User not found'}), 404
+
+    try:
+        # Find messages between current user and contact
+        messages = mongo.db.messages.find({
+            "$or": [
+                {"senderId": ObjectId(current_user['_id']), "receiverId": ObjectId(contact_id)},
+                {"senderId": ObjectId(contact_id), "receiverId": ObjectId(current_user['_id'])}
+            ]
+        }).sort("timestamp", 1)  # Sort by timestamp ascending
+
+        formatted_messages = []
+        for message in messages:
+            message['_id'] = str(message['_id'])
+            message['senderId'] = str(message['senderId'])
+            message['receiverId'] = str(message['receiverId'])
+            formatted_messages.append(message)
+
+        return jsonify({'messages': formatted_messages}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
