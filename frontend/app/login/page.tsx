@@ -41,6 +41,11 @@ export default function Home() {
         body: JSON.stringify({ username, password }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Login failed with status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (response.ok) {
@@ -52,12 +57,11 @@ export default function Home() {
         // Redirect to main page
         router.push('/main');
       } else {
-        // Login failed
-        setError(data.message || "Login failed. Please check your credentials.");
+        setError(`Login failed: ${data.message || "Login failed"}`);
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      setError("Connection error:", error);
+      setError(`Connection error: ${error}`);
     } finally {
       setLoading(false);
     }
