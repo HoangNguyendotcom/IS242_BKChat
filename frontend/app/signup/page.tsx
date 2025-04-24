@@ -23,7 +23,6 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<any>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [signupMessage, setSignupMessage] = useState({ type: '', message: '' });
 
   const router = useRouter();
 
@@ -96,7 +95,6 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    setSignupMessage({ type: '', message: '' });
 
     try {
       // Send data to backend
@@ -112,28 +110,14 @@ export default function SignupPage() {
 
       if (response.ok) {
         // Successful signup
-        setSignupMessage({
-          type: 'success',
-          message: data.message || 'Signup successful! Redirecting to login...'
-        });
-
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        router.push('/main');
       } else {
         // Failed signup
-        setSignupMessage({
-          type: 'error',
-          message: data.message || 'Signup failed. Please try again.'
-        });
+        console.error('Signup failed:', data.message || 'Signup failed. Please try again.');
       }
     } catch (error: any) {
       console.error('Error during signup:', error);
-      setSignupMessage({
-        type: 'error',
-        message: 'Connection error. Please check your internet connection.'
-      });
     } finally {
       setIsLoading(false);
     }
@@ -190,17 +174,6 @@ export default function SignupPage() {
               </div>
               <h2 className="text-xl font-bold mb-1">Welcome Homie!</h2>
               <p className="text-slate-700 mb-6">Please sign up to join with us</p>
-
-              {/* Show signup message if exists */}
-              {signupMessage.message && (
-                <div className={`p-3 mb-4 text-sm rounded ${
-                  signupMessage.type === 'success' 
-                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                    : 'bg-red-100 text-red-700 border border-red-200'
-                }`}>
-                  {signupMessage.message}
-                </div>
-              )}
 
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">

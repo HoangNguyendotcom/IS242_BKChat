@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Search, MoreVertical, Home, ImageIcon, Smile, Send, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 interface Contact {
   id: string
@@ -42,6 +43,7 @@ export default function MainPage() {
     position: { top: 0, left: 0 }
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const defaultAvatar = "/avatars/avatar.jpeg";
 
@@ -54,28 +56,42 @@ export default function MainPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [conversations, setConversations] = useState<Record<string, Message[]>>({});
 
+  // Get user function that checks localStorage
+  const getUser = () => {
+    // First try localStorage
+    const user = localStorage.getItem('user');
+    
+    if (user) {
+      return JSON.parse(user);
+    }
+    
+    return null;
+  };
+
   useEffect(() => {
-        const fetchData = async () => {
+    const fetchData = async () => {
       try {
-        let token = null;
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          // Does this cookie string begin with the name we want?
-          if (cookie.startsWith('token=')) {
-            token = cookie.substring('token='.length);
-            break;
-          }
-        }
-        if (!token) {
-          console.error('Token not found in cookie');
+        const user = getUser();
+        
+        if (!user) {
+          console.error('User not found in localStorage');
+          // Redirect to login page if no user found
+          router.push('/');
           return;
         }
-        const response = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        
+        console.log('Found user, fetching data...');
+        
+        const response = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations');
+        
+        if (!response.ok) {
+          // Get the error details from the response
+          const errorText = await response.text();
+          console.error(`API Error: ${response.status}`, errorText);
+
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
         const data = await response.json();
         setContacts(data.contacts);
         setConversations(data.conversations);
@@ -85,7 +101,7 @@ export default function MainPage() {
     };
 
     fetchData();
-  }, []);
+  }, [router]);
 
   // Function to filter contacts based on search query
   const getFilteredContacts = () => {
@@ -166,7 +182,7 @@ export default function MainPage() {
     }
   }, [])
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (messageInput.trim() && selectedContact) {
       const newMessage: Message = {
         id: `${Date.now()}`,
@@ -180,6 +196,26 @@ export default function MainPage() {
         ...prev,
         [selectedContact]: [...(prev[selectedContact] || []), newMessage],
       }))
+
+      // Here you could also send the message to your backend
+      // const token = getToken();
+      // if (token) {
+      //   try {
+      //     await fetch('http://localhost:5000/api/chat/send_message', {
+      //       method: 'POST',
+      //       headers: {
+      //         'Authorization': `Bearer ${token}`,
+      //         'Content-Type': 'application/json',
+      //       },
+      //       body: JSON.stringify({
+      //         contactId: selectedContact,
+      //         message: messageInput
+      //       }),
+      //     });
+      //   } catch (error) {
+      //     console.error('Error sending message:', error);
+      //   }
+      // }
 
       setMessageInput("")
     }
@@ -408,10 +444,9 @@ export default function MainPage() {
 
         {/* User profile */}
         <div className="p-3 border-t flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="w-12 h-12 relative">
-              {/* Conditional rendering based on client state */}
-              {isClient ? (
+          {isClient && getUser() ? (
+            <Link href="/admin" className="flex items-center gap-3">
+              <div className="w-12 h-12 relative">
                 <Image
                   src="/images/profile.png"
                   alt="profile"
@@ -419,15 +454,15 @@ export default function MainPage() {
                   height={40}
                   className="rounded-lg"
                 />
-              ) : (
-                <div className="w-12 h-12 bg-gray-100 rounded-lg"></div> // Placeholder during SSR
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium">Cong Minh</p>
-              <p className="text-xs text-gray-500">@tcminh.sdh24</p>
-            </div>
-          </Link>
+              </div>
+              <div>
+                <p className="text-sm font-medium">{getUser().username}</p>
+                <p className="text-xs text-gray-500">@{getUser().username}</p>
+              </div>
+            </Link>
+          ) : (
+            <div>Loading...</div>
+          )}
         </div>
       </div>
 
@@ -538,57 +573,57 @@ export default function MainPage() {
                 </button>
               ) : (
                 <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                  onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
-                >
-                  ... Toxic message
-                </button>
-              )}
-              <button
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
               >
-                Delete message
+                ... Toxic message
               </button>
-            </div>
-          )}
+            )}
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+              onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
+            >
+              Delete message
+            </button>
+          </div>
+        )}
 
-          {/* Message input */}
-          <div className="border-t p-3 flex items-center">
-            <button className="p-2 text-gray-500">
-              <ImageIcon className="h-5 w-5" />
-            </button>
-            <div className="flex-1 mx-2">
-              <Input
-                placeholder="Input something..."
-                className="border-0 focus-visible:ring-0"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
-                }}
-              />
-            </div>
-            <button className="p-2 text-gray-500">
-              <Smile className="h-5 w-5" />
-            </button>
-            <button className="p-2 text-green-500" onClick={handleSendMessage}>
-              <Send className="h-5 w-5" />
-            </button>
+        {/* Message input */}
+        <div className="border-t p-3 flex items-center">
+          <button className="p-2 text-gray-500">
+            <ImageIcon className="h-5 w-5" />
+          </button>
+          <div className="flex-1 mx-2">
+            <Input
+              placeholder="Input something..."
+              className="border-0 focus-visible:ring-0"
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage()
+                }
+              }}
+            />
           </div>
+          <button className="p-2 text-gray-500">
+            <Smile className="h-5 w-5" />
+          </button>
+          <button className="p-2 text-green-500" onClick={handleSendMessage}>
+            <Send className="h-5 w-5" />
+          </button>
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold mb-3">You don't have a conversation selected.</h2>
-            <p className="text-lg text-gray-500 mb-8">Choose one from your existing conversation, or start a new one.</p>
-            <Button className="bg-blue-500 hover:bg-blue-600 text-lg py-2 px-4">New Conversation</Button>
-          </div>
+      </div>
+    ) : (
+      <div className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold mb-3">You don't have a conversation selected.</h2>
+          <p className="text-lg text-gray-500 mb-8">Choose one from your existing conversation, or start a new one.</p>
+          <Button className="bg-blue-500 hover:bg-blue-600 text-lg py-2 px-4">New Conversation</Button>
         </div>
-      )}
-    </div>
-  )
+      </div>
+    )}
+  </div>
+)
 }

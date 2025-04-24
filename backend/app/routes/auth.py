@@ -16,7 +16,7 @@ def login():
     user, token = AuthService.login(username, password)
 
     if user:
-        return jsonify({'access_token': token}), 200
+        return jsonify({'user': user, 'access_token': token}), 200
     else:
         return jsonify({'message': 'Invalid username or password'}), 401
 

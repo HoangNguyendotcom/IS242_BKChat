@@ -18,13 +18,18 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const router = useRouter();
 
   // Set isClient to true after mounting
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+
+    if (isLoggedIn) {
+      router.push('/main');
+    }
+  }, [isLoggedIn, router]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,11 +56,15 @@ export default function Home() {
       if (response.ok) {
         // Login successful
         console.log("Login successful:", data);
-        // Save user data or token if needed
-        localStorage.setItem('token', data.access_token);
-
-        // Redirect to main page
-        router.push('/main');
+        
+        // Save user data to localStorage
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Log to confirm user is saved
+        console.log("User saved to localStorage");
+        
+        // Set isLoggedIn to true
+        setIsLoggedIn(true);
       } else {
         setError(`Login failed: ${data.message || "Login failed"}`);
       }

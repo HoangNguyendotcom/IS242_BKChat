@@ -1,5 +1,4 @@
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import create_access_token
 from app.models.user import User
 
 bcrypt = Bcrypt()
@@ -13,8 +12,7 @@ class AuthService:
             return None, None
 
         if bcrypt.check_password_hash(user['password'], password):
-            access_token = create_access_token(identity=str(user['_id']))
-            return user, access_token
+            return user, "test_token"
         else:
             return None, None
 

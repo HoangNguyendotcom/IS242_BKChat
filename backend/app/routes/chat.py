@@ -74,21 +74,7 @@ def create_messages():
 
 @chat_bp.route('/get_contacts_and_conversations', methods=['GET'])
 def get_contacts_and_conversations():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        return jsonify({'message': 'Authorization header is required'}), 400
-
-    try:
-        token = auth_header.split(' ')[1]
-        decoded_token = jwt.decode(token, 'your-secret-key', algorithms=['HS256'])
-        username = decoded_token.get('username')
-    except Exception as e:
-        return jsonify({'message': 'Invalid token'}), 400
-
-    if not username:
-        return jsonify({'message': 'Username not found in token'}), 400
-
-    user = User.find_by_username(username)
+    user = User.find_by_username("tcminh.sdh241")
 
     if not user:
         return jsonify({'message': 'User not found'}), 404
