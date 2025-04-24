@@ -2,9 +2,14 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
+COPY . .
 
-CMD ["python", "app.py"]
+ENV FLASK_APP=run.py
+ENV FLASK_ENV=development
+
+EXPOSE 5000
+
+CMD ["python", "run.py"]

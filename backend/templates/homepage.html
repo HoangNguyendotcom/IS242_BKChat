@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BKChat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 flex flex-col">
+    <div class="flex-1 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl overflow-hidden relative">
+            <!-- Background waves -->
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="absolute -left-10 top-40 w-full h-96 bg-blue-200/30 rounded-full blur-xl transform rotate-12"></div>
+                <div class="absolute -right-10 bottom-20 w-full h-96 bg-blue-300/30 rounded-full blur-xl transform -rotate-12"></div>
+            </div>
+
+            <div class="relative z-10 flex flex-col items-center justify-center p-12 text-center">
+                <!-- Logo -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-center">
+                        <div class="w-24 h-24 relative mr-4">
+                            <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                                 alt="BK Logo" 
+                                 class="rounded-lg w-24 h-24">
+                        </div>
+                        <h1 class="text-6xl font-bold text-red-500">BKchat</h1>
+                    </div>
+                </div>
+
+                <!-- Welcome Heading -->
+                <h2 class="text-4xl font-bold mb-6 text-blue-700">Welcome to BKChat!!!</h2>
+                
+                <!-- Larger BK image -->
+                <div class="w-56 h-56 relative mb-10">
+                    <img src="{{ url_for('static', filename='images/bk-logo.png') }}" 
+                         alt="BK Logo" 
+                         class="rounded-lg w-56 h-56">
+                </div>
+
+                <!-- Start Chatting Button -->
+                <a href="{{ url_for('auth.login') }}" 
+                   class="inline-block w-64 h-14 text-2xl bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center justify-center">
+                    Start Chatting...
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
