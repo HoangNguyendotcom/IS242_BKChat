@@ -1,32 +1,51 @@
+# app/__init__.py
 from flask import Flask
 from flask_cors import CORS
+from flask_pymongo import PyMongo
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+import redis
+import os
 
-def create_app():
-    """Initialize the Flask application"""
-    app = Flask(__name__, 
-                static_folder='../static', 
-                template_folder='../templates')
+# Initialize extensions
+mongo = PyMongo()
+jwt = JWTManager()
+bcrypt = Bcrypt()
+redis_client = None
+
+def create_app(config=None):
+    """
+    Application factory function to create and configure the Flask app
+    """
+    # Create Flask app instance
+    app = Flask(__name__)
     
-    # Enable CORS
-    CORS(app)
+    # Load default configuration
+    app.config.from_object('app.config')
     
-    # Set secret key
-    app.secret_key = "your_secret_key_here"  # Change in production
+    # Override with instance config if exists
+    if config:
+        app.config.from_object(config)
     
-    # Register blueprints
-    from app.routes.auth import auth_bp
-    from app.routes.chat import chat_bp
-    # from app.routes.friends import friends_bp
-    # from app.routes.settings import settings_bp
+    # Configure MongoDB
+    app.config.setdefault('MONGO_URI', 'mongodb://localhost:27017/flask_app')
     
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(chat_bp)
-    # app.register_blueprint(friends_bp)
-    # app.register_blueprint(settings_bp)
+    # Configure Redis
+    redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/0')
     
-    @app.route('/')
-    def index():
-        from flask import render_template
-        return render_template('homepage.html')
+    # Enable CORS for frontend
+    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    
+    # Initialize extensions with app
+    global redis_client
+    mongo.init_app(app)
+    jwt.init_app(app)
+    bcrypt.init_app(app)
+    redis_client = redis.from_url(redis_url)
+    
+    # Register routes
+    with app.app_context():
+        from app.routes import register_routes
+        register_routes(app)
     
     return app
