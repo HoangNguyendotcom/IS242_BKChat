@@ -6,14 +6,14 @@ from app.models.userstats import UserStats
 
 class Message:
     @staticmethod
-    def create(sender_id, receiver_id, text, is_emoji=False):
+    def create(sender_id, receiver_id, text, is_emoji=False, is_toxic=False):
         message = {
             "senderId": ObjectId(sender_id),
             "receiverId": ObjectId(receiver_id),
             "text": text,
             "timestamp": datetime.utcnow(),
             "isEmoji": is_emoji,
-            "isToxic": False,  # Can be updated by a toxicity detection service
+            "isToxic": is_toxic,  # Set by ML model
             "userFeedback": None
         }
         message_id = mongo.db.messages.insert_one(message).inserted_id

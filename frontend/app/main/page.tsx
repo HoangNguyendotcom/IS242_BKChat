@@ -27,7 +27,7 @@ interface Message {
   timestamp: string
   isEmoji?: boolean
   isToxic?: boolean
-  userFeedback?: "toxic" | "not_toxic" | null
+  userFeedback?: "Toxic" | "Not Toxic" | null
 }
 
 interface CurrentUser {
@@ -92,7 +92,7 @@ export default function MainPage() {
             id: contact._id,
             name: contact.name,
             username: contact.username,
-            avatar: `/avatars/${contact.avatar || 'avatar.jpeg'}`,
+            avatar: contact.avatar || "/avatars/avatar.jpeg",
             lastMessage: contact.lastMessage || '',
             date: contact.date || '',
             reacted: contact.reacted || undefined,
@@ -289,14 +289,16 @@ export default function MainPage() {
         throw new Error('Failed to send message')
       }
 
+      const data = await response.json()
+
       // Add the new message to the local state
       const newMessage = {
-        id: Date.now().toString(),
-        senderId: '6809c72a9ea8f2aa0c388bbc', // Current user's ID
+        id: data.messageId,
+        senderId: currentUser?._id || '',
         text: messageInput,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isEmoji: false,
-        isToxic: false
+        isToxic: data.isToxic || false
       }
 
       setMessages(prev => [...prev, newMessage])
@@ -364,17 +366,44 @@ export default function MainPage() {
     }, 0);
   }
 
-  const handleToxicFeedback = (messageId: string, isToxic: boolean) => {
-    setMessages((prevMessages) => {
-      return prevMessages.map((message) =>
-        message.id === messageId 
-          ? { ...message, userFeedback: isToxic ? "toxic" : "not_toxic" } 
-          : message
-      )
-    })
+  const handleToxicFeedback = async (messageId: string, isToxic: boolean) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('No token found')
+        return
+      }
 
-    // Close the option menu after setting feedback
-    setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
+      const response = await fetch(`http://localhost:5000/api/chat/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({
+          userFeedback: isToxic ? "Toxic" : "Not Toxic"
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update message feedback')
+      }
+
+      // Update local state after successful API call
+      setMessages((prevMessages) => {
+        return prevMessages.map((message) =>
+          message.id === messageId 
+            ? { ...message, userFeedback: isToxic ? "Toxic" : "Not Toxic" } 
+            : message
+        )
+      })
+
+      // Close the option menu after setting feedback
+      setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } })
+    } catch (error) {
+      console.error('Error updating message feedback:', error)
+      alert('Failed to update message feedback. Please try again.')
+    }
   }
   
   const handleDeleteMessage = async (messageId: string) => {
@@ -561,7 +590,7 @@ export default function MainPage() {
             <div className="w-12 h-12 relative">
               {isClient && currentUser ? (
                 <Image
-                  src="/images/profile.png"
+                  src={currentUser.avatar || "/images/profile.png"}
                   alt="profile"
                   width={40}
                   height={40}
@@ -611,9 +640,9 @@ export default function MainPage() {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "justify-end" : "justify-start"}`}
+                    className={`flex ${message.senderId === currentUser?._id ? "justify-end" : "justify-start"}`}
                   >
-                    {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
+                    {message.senderId !== currentUser?._id && (
                       <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
                         <Image
                           src={selectedContactData?.avatar || "/avatars/avatar.jpeg"}
@@ -626,7 +655,7 @@ export default function MainPage() {
                     <div className="flex flex-col relative group">
                       <div
                         className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
-                          message.senderId === '6809c72a9ea8f2aa0c388bbc' ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
+                          message.senderId === currentUser?._id ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
                         } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
                       >
                         <span className="flex-1">{message.text}</span>
@@ -635,11 +664,11 @@ export default function MainPage() {
                       {/* Toxic status and timestamp */}
                       <div className="flex items-center mt-1">
                         <div className="flex items-center">
-                          {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
+                          {message.senderId === currentUser?._id && (
                             <>
                               {message.userFeedback && (
-                                <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
-                                  Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                                <span className={`text-xs ${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
+                                  Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
                                 </span>
                               )}
                               <button
@@ -650,7 +679,7 @@ export default function MainPage() {
                               </button>
                             </>
                           )}
-                          {message.senderId !== '6809c72a9ea8f2aa0c388bbc' && (
+                          {message.senderId !== currentUser?._id && (
                             <>
                               <button
                                 className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
@@ -659,8 +688,8 @@ export default function MainPage() {
                                 <MoreVertical className="h-4 w-4" />
                               </button>
                               {message.userFeedback && (
-                                <span className={`text-xs ${message.userFeedback === "toxic" ? "text-red-500" : "text-green-500"}`}>
-                                  Marked {message.userFeedback === "toxic" ? "as toxic" : "as not toxic"}
+                                <span className={`text-xs ${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
+                                  Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
                                 </span>
                               )}
                             </>
@@ -679,10 +708,10 @@ export default function MainPage() {
                         )}
                       </div>
                     </div>
-                    {message.senderId === '6809c72a9ea8f2aa0c388bbc' && (
+                    {message.senderId === currentUser?._id && (
                       <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden ml-2 flex-shrink-0">
                         <Image
-                          src="/images/profile.png"
+                          src={currentUser?.avatar || "/images/profile.png"}
                           alt="You"
                           width={32}
                           height={32}
@@ -710,7 +739,7 @@ export default function MainPage() {
             >
               <div className="px-4 py-2 text-center font-medium border-b border-gray-100">OPTION</div>
               {/* Find the current message to determine its feedback state */}
-              {optionMenu.messageId && messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "toxic" ? (
+              {optionMenu.messageId && messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic" ? (
                 <button
                   className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
                   onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}

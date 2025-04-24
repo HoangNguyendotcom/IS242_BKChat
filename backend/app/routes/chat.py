@@ -2,6 +2,7 @@
 from flask import request, jsonify
 from . import chat_bp
 from app import mongo
+from app.services.toxicity_service import toxicity_service
 
 # Get all messages endpoint
 @chat_bp.route('/messages', methods=['GET'])
@@ -25,8 +26,15 @@ def send_message():
         return jsonify({'message': 'User not found'}), 404
 
     try:
-        message_id = Message.create(str(current_user['_id']), receiver_id, text, is_emoji)
-        return jsonify({'message': 'Message sent successfully', 'messageId': message_id}), 201
+        # Check message toxicity using ML model
+        is_toxic = toxicity_service.check_toxicity(text)
+        
+        message_id = Message.create(str(current_user['_id']), receiver_id, text, is_emoji, is_toxic)
+        return jsonify({
+            'message': 'Message sent successfully', 
+            'messageId': message_id,
+            'isToxic': is_toxic
+        }), 201
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
@@ -157,6 +165,33 @@ def delete_message(message_id):
         
         if result.deleted_count > 0:
             return jsonify({'message': 'Message deleted successfully'}), 200
+        else:
+            return jsonify({'message': 'Message not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# Update message feedback endpoint
+@chat_bp.route('/messages/<message_id>', methods=['PATCH'])
+def update_message_feedback(message_id):
+    try:
+        data = request.get_json()
+        user_feedback = data.get('userFeedback')
+        
+        if not user_feedback:
+            return jsonify({'message': 'User feedback is required'}), 400
+            
+        # Convert string ID to ObjectId
+        message_id = ObjectId(message_id)
+        
+        # Update the message
+        result = mongo.db.messages.update_one(
+            {'_id': message_id},
+            {'$set': {'userFeedback': user_feedback}}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({'message': 'Message feedback updated successfully'}), 200
         else:
             return jsonify({'message': 'Message not found'}), 404
             
