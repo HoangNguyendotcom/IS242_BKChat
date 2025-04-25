@@ -52,6 +52,7 @@ export default function Home() {
       }
 
       const data = await response.json();
+      console.log("Login response data:", data);
 
       if (response.ok) {
         // Login successful
@@ -59,9 +60,18 @@ export default function Home() {
         
         // Save user data to localStorage
         localStorage.setItem('user', JSON.stringify(data.user));
+        console.log("User data stored:", data.user);
+        
+        // Save token to localStorage
+        if (data.access_token) {
+          localStorage.setItem('token', data.access_token);
+          console.log("Token stored:", data.access_token);
+        } else {
+          console.error("No access token in response");
+        }
         
         // Log to confirm user is saved
-        console.log("User saved to localStorage");
+        console.log("User and token saved to localStorage");
         
         // Set isLoggedIn to true
         setIsLoggedIn(true);

@@ -77,7 +77,7 @@ export default function MainPage() {
 
         const response = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations', {
           headers: {
-            'Authorization': token
+            'Authorization': `Bearer ${token}`
           }
         })
         

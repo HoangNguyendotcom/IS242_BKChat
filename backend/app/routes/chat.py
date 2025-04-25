@@ -1,8 +1,12 @@
 # app/routes/chat.py
 from flask import request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from . import chat_bp
 from app import mongo
 from app.services.toxicity_service import toxicity_service
+from app.models.message import Message
+from app.models.user import User
+from bson import ObjectId
 
 # Get all messages endpoint
 @chat_bp.route('/messages', methods=['GET'])
@@ -96,8 +100,11 @@ def create_messages():
     return jsonify({'message': 'Messages created successfully'}), 201
 
 @chat_bp.route('/get_contacts_and_conversations', methods=['GET'])
+@jwt_required()
 def get_contacts_and_conversations():
-    user = User.find_by_username("tcminh.sdh241")
+    # Get user ID from JWT token
+    user_id = get_jwt_identity()
+    user = User.find_by_id(user_id)
 
     if not user:
         return jsonify({'message': 'User not found'}), 404
@@ -114,7 +121,12 @@ def get_contacts_and_conversations():
             print(f"Error finding friend {friend_username}: {e}")
 
     conversations = {}
-    for message in mongo.db.messages.find():
+    for message in mongo.db.messages.find({
+        "$or": [
+            {"senderId": ObjectId(user_id)},
+            {"receiverId": ObjectId(user_id)}
+        ]
+    }):
         message['_id'] = str(message['_id'])
         message['senderId'] = str(message['senderId'])
         message['receiverId'] = str(message['receiverId'])

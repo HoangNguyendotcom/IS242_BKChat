@@ -26,6 +26,16 @@ class User:
         return user
 
     @staticmethod
+    def find_by_id(user_id):
+        try:
+            user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
+            if user:
+                user['_id'] = str(user['_id'])
+            return user
+        except:
+            return None
+
+    @staticmethod
     def add_friend(username, friend_username):
         user = mongo.db.users.find_one({"username": username})
         if user:
