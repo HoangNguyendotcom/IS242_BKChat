@@ -106,42 +106,58 @@ def create_messages():
 @chat_bp.route('/get_contacts_and_conversations', methods=['GET'])
 @jwt_required()
 def get_contacts_and_conversations():
-    # Get user ID from JWT token
-    user_id = get_jwt_identity()
-    user = User.find_by_id(user_id)
+    try:
+        # Get user ID from JWT token
+        user_id = get_jwt_identity()
+        print(f"User ID from token: {user_id}")  # Debug log
+        
+        user = User.find_by_id(user_id)
+        print(f"User found: {user is not None}")  # Debug log
 
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
 
-    friend_usernames = user.get('friends', [])
-    friends = []
-    for friend_username in friend_usernames:
-        try:
-            friend = User.find_by_username(friend_username)
-            if friend:
-                friend['_id'] = str(friend['_id'])
-                friends.append(friend)
-        except Exception as e:
-            print(f"Error finding friend {friend_username}: {e}")
+        # Get friends from the friends object
+        friends = []
+        friends_data = user.get('friends', {})
+        print(f"Friends data: {friends_data}")  # Debug log
+        
+        for friend_username in friends_data.keys():
+            try:
+                friend = User.find_by_username(friend_username)
+                if friend:
+                    friend['_id'] = str(friend['_id'])
+                    friends.append(friend)
+            except Exception as e:
+                print(f"Error finding friend {friend_username}: {e}")
 
-    conversations = {}
-    for message in mongo.db.messages.find({
-        "$or": [
-            {"senderId": ObjectId(user_id)},
-            {"receiverId": ObjectId(user_id)}
-        ]
-    }):
-        message['_id'] = str(message['_id'])
-        message['senderId'] = str(message['senderId'])
-        message['receiverId'] = str(message['receiverId'])
-        senderId = message['senderId']
-        receiverId = message['receiverId']
-        conversationId = str(senderId) + '_' + str(receiverId)
-        if conversationId not in conversations:
-            conversations[conversationId] = []
-        conversations[conversationId].append(message)
+        print(f"Found {len(friends)} friends")  # Debug log
 
-    return jsonify({'contacts': friends, 'conversations': conversations}), 200
+        conversations = {}
+        messages = mongo.db.messages.find({
+            "$or": [
+                {"senderId": ObjectId(user_id)},
+                {"receiverId": ObjectId(user_id)}
+            ]
+        })
+        
+        for message in messages:
+            message['_id'] = str(message['_id'])
+            message['senderId'] = str(message['senderId'])
+            message['receiverId'] = str(message['receiverId'])
+            senderId = message['senderId']
+            receiverId = message['receiverId']
+            conversationId = str(senderId) + '_' + str(receiverId)
+            if conversationId not in conversations:
+                conversations[conversationId] = []
+            conversations[conversationId].append(message)
+
+        print(f"Found {len(conversations)} conversations")  # Debug log
+        return jsonify({'contacts': friends, 'conversations': conversations}), 200
+        
+    except Exception as e:
+        print(f"Error in get_contacts_and_conversations: {str(e)}")  # Debug log
+        return jsonify({'message': str(e)}), 500
 
 @chat_bp.route('/messages/<contact_id>', methods=['GET'])
 @jwt_required()

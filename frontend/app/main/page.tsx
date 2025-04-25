@@ -81,23 +81,44 @@ export default function MainPage() {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          console.error('No token found')
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined') {
+          console.error('Not in browser environment')
           return
         }
 
+        const token = localStorage.getItem('token')
+        console.log('Token from localStorage:', token) // Debug log
+        
+        if (!token) {
+          console.error('No token found in localStorage')
+          return
+        }
+
+        // Verify token format
+        const tokenParts = token.split('.')
+        if (tokenParts.length !== 3) {
+          console.error('Invalid token format')
+          return
+        }
+
+        console.log('Fetching contacts with token...') // Debug log
         const response = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations', {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         })
         
+        console.log('Response status:', response.status) // Debug log
         if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Error response:', errorData) // Debug log
           throw new Error('Failed to fetch contacts')
         }
         
         const data = await response.json()
+        console.log('Response data:', data) // Debug log
         
         if (data.contacts) {
           const formattedContacts = data.contacts.map((contact: any) => ({
@@ -559,7 +580,7 @@ export default function MainPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           userFeedback: isToxic ? "Toxic" : "Not Toxic"
@@ -608,7 +629,7 @@ export default function MainPage() {
       const response = await fetch(`http://localhost:5000/api/chat/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })

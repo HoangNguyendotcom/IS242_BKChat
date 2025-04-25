@@ -13,7 +13,7 @@ class User:
             "email": email,
             "password": password_hash,
             "avatar": avatar,
-            "friends": [],
+            "friends": {},
             "created_at": datetime.utcnow()
         }
         user_id = mongo.db.users.insert_one(user).inserted_id
@@ -41,9 +41,14 @@ class User:
         user = mongo.db.users.find_one({"username": username})
         if user:
             user['_id'] = str(user['_id'])
+            if 'friends' not in user:
+                user['friends'] = {}
             if friend_username not in user['friends']:
-                user['friends'].append(friend_username)
-                mongo.db.users.update_one({"username": username}, {"$set": {"friends": user['friends']}})
+                user['friends'][friend_username] = True
+                mongo.db.users.update_one(
+                    {"username": username}, 
+                    {"$set": {"friends": user['friends']}}
+                )
                 return True
             else:
                 return False
