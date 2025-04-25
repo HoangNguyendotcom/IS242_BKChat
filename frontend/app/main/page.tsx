@@ -642,82 +642,82 @@ export default function MainPage() {
                     key={message.id}
                     className={`flex ${message.senderId === currentUser?._id ? "justify-end" : "justify-start"}`}
                   >
-                    {message.senderId !== currentUser?._id && (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mr-2 flex-shrink-0">
-                        <Image
-                          src={selectedContactData?.avatar || "/avatars/avatar.jpeg"}
-                          alt={selectedContactData?.name || "Contact"}
-                          width={32}
-                          height={32}
-                        />
-                      </div>
-                    )}
-                    <div className="flex flex-col relative group">
-                      <div
-                        className={`rounded-lg px-4 py-2 max-w-xs flex items-center relative ${
-                          message.senderId === currentUser?._id ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
-                        } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}
-                      >
-                        <span className="flex-1">{message.text}</span>
-                      </div>
+                    <div className="flex flex-col group">
+                      <div className="flex items-center gap-2">
+                        {message.senderId !== currentUser?._id && (
+                          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                            <Image
+                              src={selectedContactData?.avatar || "/avatars/avatar.jpeg"}
+                              alt={selectedContactData?.name || "Contact"}
+                              width={32}
+                              height={32}
+                            />
+                          </div>
+                        )}
 
-                      {/* Toxic status and timestamp */}
-                      <div className="flex items-center mt-1">
-                        <div className="flex items-center">
-                          {message.senderId === currentUser?._id && (
-                            <>
-                              {message.userFeedback && (
-                                <span className={`text-xs ${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
-                                  Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
-                                </span>
-                              )}
-                              <button
-                                className="ml-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
-                                onClick={(e) => handleMessageOptions(e, message.id)}
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          {message.senderId !== currentUser?._id && (
-                            <>
-                              <button
-                                className="mr-2 text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
-                                onClick={(e) => handleMessageOptions(e, message.id)}
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-                              {message.userFeedback && (
-                                <span className={`text-xs ${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
-                                  Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
-                                </span>
-                              )}
-                            </>
+                        {/* Status and options for current user's messages */}
+                        {message.senderId === currentUser?._id && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                              onClick={(e) => handleMessageOptions(e, message.id)}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                            {message.userFeedback && (
+                              <span className={`text-sm ${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
+                                Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className={`flex-1 flex items-center gap-2 rounded-lg px-4 py-2 ${
+                          message.senderId === currentUser?._id ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
+                        } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}>
+                          {(message.isToxic && message.userFeedback === null) || message.userFeedback === "Toxic" ? (
+                            <span className="text-yellow-800">Warning: This message contains toxic words</span>
+                          ) : (
+                            <span>{message.text}</span>
                           )}
                         </div>
-                        <span className="text-xs text-gray-500 ml-2">{message.timestamp}</span>
-                        {message.isToxic && (
-                          <div className="ml-2">
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              Warning: This message contains toxic words
-                            </span>
+
+                        {/* Status and options for received messages */}
+                        {message.senderId !== currentUser?._id && (
+                          <div className="flex items-center gap-2 text-sm">
+                            {message.userFeedback && (
+                              <span className={`${message.userFeedback === "Toxic" ? "text-red-500" : "text-green-500"}`}>
+                                Marked {message.userFeedback === "Toxic" ? "as Toxic" : "as Not Toxic"}
+                              </span>
+                            )}
+                            <button
+                              className="text-gray-500 hover:text-gray-700 z-10 options-toggle-button"
+                              onClick={(e) => handleMessageOptions(e, message.id)}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        {message.senderId === currentUser?._id && (
+                          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                            <Image
+                              src={currentUser?.avatar || "/images/profile.png"}
+                              alt="You"
+                              width={32}
+                              height={32}
+                            />
                           </div>
                         )}
                       </div>
-                    </div>
-                    {message.senderId === currentUser?._id && (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden ml-2 flex-shrink-0">
-                        <Image
-                          src={currentUser?.avatar || "/images/profile.png"}
-                          alt="You"
-                          width={32}
-                          height={32}
-                        />
+                      
+                      {/* Timestamp below message */}
+                      <div className={`flex text-xs text-gray-500 mt-1 ${
+                        message.senderId === currentUser?._id ? "justify-end" : "justify-start ml-10"
+                      }`}>
+                        {message.timestamp}
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
