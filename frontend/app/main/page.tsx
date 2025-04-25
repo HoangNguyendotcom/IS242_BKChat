@@ -54,6 +54,8 @@ export default function MainPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [messages, setMessages] = useState<Message[]>([])
   const [isMessagesLoading, setIsMessagesLoading] = useState(false)
+  const [toxicWarningMessage, setToxicWarningMessage] = useState<string | null>(null)
+  const [pendingToxicMessage, setPendingToxicMessage] = useState<{text: string} | null>(null)
   const optionsMenuRef = useRef<HTMLDivElement>(null);
   const [optionMenu, setOptionMenu] = useState<{
     visible: boolean
@@ -376,9 +378,63 @@ export default function MainPage() {
     }
   }, [])
 
-  const handleSendMessage = async () => {
+  const checkToxicity = async (text: string): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.error('No token found')
+        return false
+      }
+
+      // Use the existing messages endpoint with a special flag to only check toxicity
+      const response = await fetch('http://localhost:5000/api/chat/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          receiverId: selectedContact,
+          text: text,
+          isEmoji: false,
+          checkOnly: true // Add this flag to indicate we only want to check toxicity
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to check toxicity')
+      }
+
+      const data = await response.json()
+      return data.isToxic
+    } catch (error) {
+      console.error('Error checking toxicity:', error)
+      return false
+    }
+  }
+
+  const handleMessageSubmit = async () => {
     if (!messageInput.trim() || !selectedContact) return
 
+    try {
+      // First check toxicity
+      const isToxic = await checkToxicity(messageInput)
+      
+      if (isToxic) {
+        // If toxic, store the message and show warning
+        setPendingToxicMessage({ text: messageInput })
+        setToxicWarningMessage(messageInput)
+        return
+      }
+
+      // If not toxic, send immediately
+      await sendMessage(messageInput, false)
+    } catch (error) {
+      console.error('Error handling message submit:', error)
+    }
+  }
+
+  const sendMessage = async (text: string, isToxic: boolean) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -394,8 +450,9 @@ export default function MainPage() {
         },
         body: JSON.stringify({
           receiverId: selectedContact,
-          text: messageInput,
-          isEmoji: false
+          text: text,
+          isEmoji: false,
+          checkOnly: false // This is an actual send
         })
       })
 
@@ -409,18 +466,26 @@ export default function MainPage() {
       const newMessage = {
         id: data.messageId,
         senderId: currentUser?._id || '',
-        text: messageInput,
+        text: text,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isEmoji: false,
-        isToxic: data.isToxic,
+        isToxic: isToxic,
         userFeedback: null,
-        isHidden: data.isToxic
+        isHidden: isToxic
       }
 
       setMessages(prev => [...prev, newMessage])
       setMessageInput("")
+      setToxicWarningMessage(null)
+      setPendingToxicMessage(null)
     } catch (error) {
       console.error('Error sending message:', error)
+    }
+  }
+
+  const handleSendAnyway = async () => {
+    if (pendingToxicMessage) {
+      await sendMessage(pendingToxicMessage.text, true)
     }
   }
 
@@ -879,31 +944,36 @@ export default function MainPage() {
               <div className="px-4 py-2 text-center font-medium border-b border-gray-100">OPTION</div>
               {optionMenu.messageId && (
                 <>
-                  {/* Case 1: Show "Not a toxic message" when message is toxic with no feedback OR marked as Toxic */}
-                  {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic && 
-                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
-                    messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic") && (
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
-                      onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
-                    >
-                      ... Not a toxic message
-                    </button>
+                  {/* Only show toxicity feedback options if the current user is the receiver */}
+                  {messages.find(msg => msg.id === optionMenu.messageId)?.senderId !== currentUser?._id && (
+                    <>
+                      {/* Case 1: Show "Not a toxic message" when message is toxic with no feedback OR marked as Toxic */}
+                      {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic && 
+                         messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
+                        messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic") && (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
+                          onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
+                        >
+                          ... Not a toxic message
+                        </button>
+                      )}
+
+                      {/* Case 2: Show "Toxic message" when message is not toxic with no feedback OR marked as Not Toxic */}
+                      {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic === false && 
+                         messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
+                        messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Not Toxic") && (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                          onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
+                        >
+                          ... Toxic message
+                        </button>
+                      )}
+                    </>
                   )}
 
-                  {/* Case 2: Show "Toxic message" when message is not toxic with no feedback OR marked as Not Toxic */}
-                  {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic === false && 
-                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
-                    messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Not Toxic") && (
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                      onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
-                    >
-                      ... Toxic message
-                    </button>
-                  )}
-
-                  {/* Show Hide/Unhide only for toxic messages or messages marked as Toxic */}
+                  {/* Show Hide/Unhide for toxic messages or messages marked as Toxic - available to both sender and receiver */}
                   {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic && 
                      messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic") && (
@@ -940,33 +1010,64 @@ export default function MainPage() {
           )}
 
           {/* Message input */}
-          <div className="border-t bg-white p-4 flex items-center gap-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <ImageIcon className="h-6 w-6 text-gray-500" />
-            </button>
-            <div className="flex-1">
-              <Input
-                placeholder="Input something..."
-                className="border rounded-full focus-visible:ring-1 focus-visible:ring-blue-400 px-4 py-2"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
+          <div className="border-t bg-white p-4">
+            {toxicWarningMessage && (
+              <div className="mb-4 flex items-center gap-2 bg-gray-200 p-3 rounded-lg">
+                <div className="text-red-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-700">Warning: This message contains toxic words.</p>
+                  <p className="text-gray-600">Do you really want to send it?</p>
+                </div>
+                <button
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={handleSendAnyway}
+                >
+                  Send Anyway
+                </button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <ImageIcon className="h-6 w-6 text-gray-500" />
+              </button>
+              <div className="flex-1">
+                <Input
+                  placeholder="Input something..."
+                  className="border rounded-full focus-visible:ring-1 focus-visible:ring-blue-400 px-4 py-2"
+                  value={messageInput}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value)
+                    // Clear toxic warning when user starts typing a new message
+                    if (toxicWarningMessage) {
+                      setToxicWarningMessage(null)
+                      setPendingToxicMessage(null)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      handleMessageSubmit()
+                    }
+                  }}
+                />
+              </div>
+              <button className="p-2 hover:bg-gray-100 rounded-full">
+                <Smile className="h-6 w-6 text-gray-500" />
+              </button>
+              <button 
+                className="p-2 hover:bg-blue-50 rounded-full text-blue-500"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleMessageSubmit();
                 }}
-              />
+              >
+                <Send className="h-6 w-6" />
+              </button>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <Smile className="h-6 w-6 text-gray-500" />
-            </button>
-            <button 
-              className="p-2 hover:bg-blue-50 rounded-full text-blue-500"
-              onClick={handleSendMessage}
-            >
-              <Send className="h-6 w-6" />
-            </button>
           </div>
         </div>
       ) : (
