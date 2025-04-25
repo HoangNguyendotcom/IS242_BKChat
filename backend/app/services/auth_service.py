@@ -20,7 +20,7 @@ class AuthService:
             return None, None
 
     @staticmethod
-    def signup(username, email, password):
+    def signup(name, username, email, password):
         existing_user = User.find_by_username(username)
         if existing_user:
             return None, "Username already exists"
@@ -30,8 +30,13 @@ class AuthService:
             return None, "Email already exists"
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        # Assuming name is not required for signup, setting it to username
-        new_user_id = User.create(name=username, username=username, email=email, password_hash=hashed_password)
+        new_user_id = User.create(
+            name=name,
+            username=username,
+            email=email,
+            password_hash=hashed_password,
+            avatar="/avatars/avatar.jpeg"  # Set default avatar
+        )
         new_user = User.find_by_username(username)
 
         return new_user, None

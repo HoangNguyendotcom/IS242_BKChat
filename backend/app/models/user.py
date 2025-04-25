@@ -6,12 +6,13 @@ from app import mongo
 
 class User:
     @staticmethod
-    def create(name, username, email, password_hash):
+    def create(name, username, email, password_hash, avatar="/avatars/avatar.jpeg"):
         user = {
             "name": name,
             "username": username,
             "email": email,
             "password": password_hash,
+            "avatar": avatar,
             "friends": [],
             "created_at": datetime.utcnow()
         }

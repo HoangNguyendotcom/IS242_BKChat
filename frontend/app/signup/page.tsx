@@ -14,6 +14,7 @@ export default function SignupPage() {
 
   // Form data state
   const [formData, setFormData] = useState({
+    name: '',
     username: '',
     email: '',
     password: ''
@@ -57,6 +58,13 @@ export default function SignupPage() {
   const validateForm = () => {
     const newErrors: any = {};
 
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters';
+    }
+
     // Username validation
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required';
@@ -98,7 +106,7 @@ export default function SignupPage() {
 
     try {
       // Send data to backend
-      const response = await fetch('http://localhost:5000/api/signup', {
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,14 +118,20 @@ export default function SignupPage() {
 
       if (response.ok) {
         // Successful signup
-        localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/main');
+        router.push('/login'); // Redirect to login page after successful signup
       } else {
         // Failed signup
-        console.error('Signup failed:', data.message || 'Signup failed. Please try again.');
+        setErrors((prev: any) => ({
+          ...prev,
+          submit: data.message || 'Signup failed. Please try again.'
+        }));
       }
     } catch (error: any) {
       console.error('Error during signup:', error);
+      setErrors((prev: any) => ({
+        ...prev,
+        submit: 'Network error. Please try again.'
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -176,13 +190,35 @@ export default function SignupPage() {
               <p className="text-slate-700 mb-6">Please sign up to join with us</p>
 
               <form className="space-y-4" onSubmit={handleSubmit}>
+                {errors.submit && (
+                  <div className="p-3 rounded bg-red-50 border border-red-200">
+                    <p className="text-red-600 text-sm">{errors.submit}</p>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <label htmlFor="name" className="block text-sm font-medium">
+                    Name
+                  </label>
+                  <Input 
+                    id="name" 
+                    placeholder="name" 
+                    value={formData.name}
+                    onChange={handleChange}
+                    className={errors.name ? "border-red-500" : ""}
+                  />
+                  {errors.name && (
+                    <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="username" className="block text-sm font-medium">
                     Username
                   </label>
                   <Input 
                     id="username" 
-                    placeholder="admin" 
+                    placeholder="username" 
                     value={formData.username}
                     onChange={handleChange}
                     className={errors.username ? "border-red-500" : ""}

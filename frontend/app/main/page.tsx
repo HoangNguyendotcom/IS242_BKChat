@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, MoreVertical, Home, ImageIcon, Smile, Send, X } from "lucide-react"
+import { Search, MoreVertical, Home, ImageIcon, Smile, Send, X, UserPlus } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -28,6 +28,7 @@ interface Message {
   isEmoji?: boolean
   isToxic?: boolean
   userFeedback?: "Toxic" | "Not Toxic" | null
+  isHidden?: boolean
 }
 
 interface CurrentUser {
@@ -37,10 +38,19 @@ interface CurrentUser {
   avatar?: string
 }
 
+interface User {
+  _id: string
+  name: string
+  username: string
+  avatar?: string
+  isFriend?: boolean
+}
+
 export default function MainPage() {
   const [selectedContact, setSelectedContact] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState("")
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [messages, setMessages] = useState<Message[]>([])
   const [isMessagesLoading, setIsMessagesLoading] = useState(false)
@@ -57,10 +67,10 @@ export default function MainPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   // New search functionality
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchDropdownRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchDropdownRef = useRef<HTMLDivElement>(null)
 
   const [conversations, setConversations] = useState<Record<string, Message[]>>({})
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
@@ -169,7 +179,8 @@ export default function MainPage() {
             timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             isEmoji: msg.isEmoji,
             isToxic: msg.isToxic,
-            userFeedback: msg.userFeedback
+            userFeedback: msg.userFeedback,
+            isHidden: msg.isToxic || msg.userFeedback === "Toxic"
           }))
           setMessages(formattedMessages)
         }
@@ -183,13 +194,55 @@ export default function MainPage() {
     fetchMessages()
   }, [selectedContact])
 
-  // Function to filter contacts based on search query
-  const getFilteredContacts = () => {
-    if (!searchQuery.trim()) return contacts;
+  // Fetch all users when component mounts
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          console.error('No token found')
+          return
+        }
+
+        const response = await fetch('http://localhost:5000/api/auth/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch users')
+        }
+        
+        const data = await response.json()
+        
+        if (data.users) {
+          const formattedUsers = data.users.map((user: any) => ({
+            _id: user._id,
+            name: user.name || user.username,  // Fallback to username if name is not available
+            username: user.username,
+            avatar: user.avatar || "/avatars/avatar.jpeg",
+            isFriend: contacts.some(contact => contact.id === user._id)
+          }))
+          setAllUsers(formattedUsers)
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error)
+        // Set empty array to prevent continuous loading state
+        setAllUsers([])
+      }
+    }
+
+    fetchAllUsers()
+  }, [contacts])
+
+  // Function to filter users based on search query
+  const getFilteredUsers = () => {
+    if (!searchQuery.trim()) return allUsers;
     
-    return contacts.filter(contact => 
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      contact.username.toLowerCase().includes(searchQuery.toLowerCase())
+    return allUsers.filter(user => 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      user.username.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
 
@@ -200,14 +253,74 @@ export default function MainPage() {
   };
 
   // Handle selection from search dropdown
-  const handleSelectContact = (contactId: string) => {
-    setSelectedContact(contactId);
+  const handleSelectUser = async (userId: string) => {
+    const selectedUser = allUsers.find(user => user._id === userId);
+    if (!selectedUser) return;
+
+    setSelectedContact(userId);
     setIsSearchDropdownOpen(false);
     setSearchQuery("");
     
-    // Optional: Focus back on input after selection
     if (searchInputRef.current) {
       searchInputRef.current.blur();
+    }
+  };
+
+  // Add new function to handle adding friend
+  const handleAddFriend = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+
+      // Get current user's username from localStorage
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        console.error('No user data found');
+        return;
+      }
+      const currentUser = JSON.parse(userData);
+
+      const response = await fetch('http://localhost:5000/api/friends/add_friend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: currentUser.username,
+          friend_username: allUsers.find(user => user._id === userId)?.username
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add friend');
+      }
+
+      // Add the new contact to the contacts list
+      const newFriend = allUsers.find(user => user._id === userId);
+      if (newFriend) {
+        const newContact: Contact = {
+          id: newFriend._id,
+          name: newFriend.name,
+          username: newFriend.username,
+          avatar: newFriend.avatar || "/avatars/avatar.jpeg",
+          lastMessage: '',
+          date: new Date().toISOString()
+        };
+        setContacts(prev => [...prev, newContact]);
+        
+        // Update user's friend status
+        setAllUsers(prev => 
+          prev.map(user => 
+            user._id === userId ? { ...user, isFriend: true } : user
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error adding friend:', error);
     }
   };
 
@@ -298,7 +411,8 @@ export default function MainPage() {
         text: messageInput,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isEmoji: false,
-        isToxic: data.isToxic || false
+        isToxic: data.isToxic || false,
+        isHidden: data.isToxic || false
       }
 
       setMessages(prev => [...prev, newMessage])
@@ -393,7 +507,11 @@ export default function MainPage() {
       setMessages((prevMessages) => {
         return prevMessages.map((message) =>
           message.id === messageId 
-            ? { ...message, userFeedback: isToxic ? "Toxic" : "Not Toxic" } 
+            ? { 
+                ...message, 
+                userFeedback: isToxic ? "Toxic" : "Not Toxic",
+                isHidden: isToxic
+              } 
             : message
         )
       })
@@ -496,7 +614,7 @@ export default function MainPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               ref={searchInputRef}
-              placeholder="Search people or messages"
+              placeholder="Search users..."
               className="pl-9 bg-gray-100 border-0 focus-visible:ring-0 text-sm"
               value={searchQuery}
               onChange={handleSearchInputChange}
@@ -516,33 +634,38 @@ export default function MainPage() {
             )}
           </div>
           
-          {/* Search dropdown */}
+          {/* Updated search dropdown */}
           {isSearchDropdownOpen && (
             <div 
               ref={searchDropdownRef}
               className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-60 overflow-auto"
             >
-              {getFilteredContacts().length > 0 ? (
-                getFilteredContacts().map((contact) => (
+              {getFilteredUsers().length > 0 ? (
+                getFilteredUsers().map((user) => (
                   <button
-                    key={contact.id}
+                    key={user._id}
                     className="w-full text-left p-3 hover:bg-gray-50 flex items-start gap-3 border-b border-gray-100"
-                    onClick={() => handleSelectContact(contact.id)}
+                    onClick={() => handleSelectUser(user._id)}
                   >
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                        <Image src={contact.avatar || "/avatars/avatar.jpeg"} alt={contact.name} width={32} height={32} />
+                        <Image src={user.avatar || "/avatars/avatar.jpeg"} alt={user.name} width={32} height={32} />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-800">{contact.name}</p>
-                      <p className="text-xs text-gray-500">{contact.username}</p>
+                      <p className="font-medium text-sm text-gray-800">{user.name}</p>
+                      <p className="text-xs text-gray-500">@{user.username}</p>
+                      {user.isFriend && (
+                        <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full mt-1">
+                          Friend
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))
               ) : (
                 <div className="p-4 text-center text-gray-500 text-sm">
-                  No results found
+                  No users found
                 </div>
               )}
             </div>
@@ -609,24 +732,38 @@ export default function MainPage() {
       </div>
 
       {/* Main content */}
-      {selectedContactData ? (
+      {selectedContact ? (
         <div className="flex-1 flex flex-col">
           {/* Chat header */}
-          <div className="flex items-center p-4 border-b">
-            <div className="flex-1 flex items-center">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden mr-3">
                 <Image
-                  src={selectedContactData.avatar || "/placeholder.svg"}
-                  alt={selectedContactData.name}
+                  src={allUsers.find(u => u._id === selectedContact)?.avatar || "/placeholder.svg"}
+                  alt={allUsers.find(u => u._id === selectedContact)?.name || "Contact"}
                   width={40}
                   height={40}
                 />
               </div>
               <div>
-                <p className="font-medium text-gray-800">{selectedContactData.name}</p>
-                <p className="text-xs text-gray-500">{selectedContactData.username}</p>
+                <p className="font-medium text-gray-800">
+                  {allUsers.find(u => u._id === selectedContact)?.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  @{allUsers.find(u => u._id === selectedContact)?.username}
+                </p>
               </div>
             </div>
+            {/* Add friend button if not already a friend */}
+            {allUsers.find(u => u._id === selectedContact && !u.isFriend) && (
+              <Button
+                onClick={() => handleAddFriend(selectedContact)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add Friend
+              </Button>
+            )}
           </div>
 
           {/* Chat messages */}
@@ -675,7 +812,7 @@ export default function MainPage() {
                         <div className={`flex-1 flex items-center gap-2 rounded-lg px-4 py-2 ${
                           message.senderId === currentUser?._id ? "bg-blue-200 text-blue-900" : "bg-gray-50 text-gray-900"
                         } ${message.isEmoji ? "text-2xl bg-transparent px-0" : ""}`}>
-                          {(message.isToxic && message.userFeedback === null) || message.userFeedback === "Toxic" ? (
+                          {((message.isToxic && message.userFeedback === null) || message.userFeedback === "Toxic") && message.isHidden ? (
                             <span className="text-yellow-800">Warning: This message contains toxic words</span>
                           ) : (
                             <span>{message.text}</span>
@@ -752,6 +889,30 @@ export default function MainPage() {
                   onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
                 >
                   ... Toxic message
+                </button>
+              )}
+              {/* Add Hide/Unhide button for toxic messages */}
+              {optionMenu.messageId && messages.find(msg => 
+                msg.id === optionMenu.messageId && 
+                (msg.isToxic || msg.userFeedback === "Toxic")
+              ) && (
+                <button
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-500"
+                  onClick={() => {
+                    if (!optionMenu.messageId) return;
+                    setMessages(prevMessages => 
+                      prevMessages.map(msg => 
+                        msg.id === optionMenu.messageId 
+                          ? { ...msg, isHidden: !msg.isHidden }
+                          : msg
+                      )
+                    );
+                    setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } });
+                  }}
+                >
+                  {messages.find(msg => msg.id === optionMenu.messageId)?.isHidden 
+                    ? "Show message" 
+                    : "Hide message"}
                 </button>
               )}
               <button
