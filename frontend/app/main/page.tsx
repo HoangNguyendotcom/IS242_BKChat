@@ -776,7 +776,40 @@ export default function MainPage() {
 
         {/* User profile */}
         <div className="p-3 border-t flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
+          <Link 
+            href="/admin" 
+            className="flex items-center gap-3"
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  console.error('No token found');
+                  return;
+                }
+
+                // Update counters before redirecting
+                const response = await fetch('http://localhost:5000/api/settings/update-counters', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+
+                if (!response.ok) {
+                  throw new Error('Failed to update counters');
+                }
+
+                // Redirect to admin page after successful update
+                window.location.href = '/admin';
+              } catch (error) {
+                console.error('Error updating counters:', error);
+                // Still redirect even if counter update fails
+                window.location.href = '/admin';
+              }
+            }}
+          >
             <div className="w-12 h-12 relative">
               {isClient && currentUser ? (
                 <Image
