@@ -16,6 +16,7 @@ def get_messages():
 
 # Send message endpoint
 @chat_bp.route('/messages', methods=['POST'])
+@jwt_required()
 def send_message():
     data = request.get_json()
     receiver_id = data.get('receiverId')
@@ -25,7 +26,10 @@ def send_message():
     if not receiver_id or not text:
         return jsonify({'message': 'Receiver ID and text are required'}), 400
 
-    current_user = User.find_by_username("tcminh.sdh241")  # This should be replaced with the actual logged-in user
+    # Get current user ID from JWT token
+    current_user_id = get_jwt_identity()
+    current_user = User.find_by_id(current_user_id)
+    
     if not current_user:
         return jsonify({'message': 'User not found'}), 404
 
@@ -33,7 +37,7 @@ def send_message():
         # Check message toxicity using ML model
         is_toxic = toxicity_service.check_toxicity(text)
         
-        message_id = Message.create(str(current_user['_id']), receiver_id, text, is_emoji, is_toxic)
+        message_id = Message.create(current_user_id, receiver_id, text, is_emoji, is_toxic)
         return jsonify({
             'message': 'Message sent successfully', 
             'messageId': message_id,
@@ -140,8 +144,12 @@ def get_contacts_and_conversations():
     return jsonify({'contacts': friends, 'conversations': conversations}), 200
 
 @chat_bp.route('/messages/<contact_id>', methods=['GET'])
+@jwt_required()
 def get_messages_by_contact(contact_id):
-    current_user = User.find_by_username("tcminh.sdh241")  # This should be replaced with the actual logged-in user
+    # Get current user ID from JWT token
+    current_user_id = get_jwt_identity()
+    current_user = User.find_by_id(current_user_id)
+    
     if not current_user:
         return jsonify({'message': 'User not found'}), 404
 
@@ -149,8 +157,8 @@ def get_messages_by_contact(contact_id):
         # Find messages between current user and contact
         messages = mongo.db.messages.find({
             "$or": [
-                {"senderId": ObjectId(current_user['_id']), "receiverId": ObjectId(contact_id)},
-                {"senderId": ObjectId(contact_id), "receiverId": ObjectId(current_user['_id'])}
+                {"senderId": ObjectId(current_user_id), "receiverId": ObjectId(contact_id)},
+                {"senderId": ObjectId(contact_id), "receiverId": ObjectId(current_user_id)}
             ]
         }).sort("timestamp", 1)  # Sort by timestamp ascending
 

@@ -161,7 +161,8 @@ export default function MainPage() {
 
         const response = await fetch(`http://localhost:5000/api/chat/messages/${selectedContact}`, {
           headers: {
-            'Authorization': token
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         })
         
@@ -389,7 +390,7 @@ export default function MainPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           receiverId: selectedContact,
@@ -411,8 +412,9 @@ export default function MainPage() {
         text: messageInput,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         isEmoji: false,
-        isToxic: data.isToxic || false,
-        isHidden: data.isToxic || false
+        isToxic: data.isToxic,
+        userFeedback: null,
+        isHidden: data.isToxic
       }
 
       setMessages(prev => [...prev, newMessage])
@@ -875,52 +877,65 @@ export default function MainPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-4 py-2 text-center font-medium border-b border-gray-100">OPTION</div>
-              {/* Find the current message to determine its feedback state */}
-              {optionMenu.messageId && messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic" ? (
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
-                  onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
-                >
-                  ... Not a toxic message
-                </button>
-              ) : (
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                  onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
-                >
-                  ... Toxic message
-                </button>
+              {optionMenu.messageId && (
+                <>
+                  {/* Case 1: Show "Not a toxic message" when message is toxic with no feedback OR marked as Toxic */}
+                  {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic && 
+                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
+                    messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic") && (
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-green-500"
+                      onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, false)}
+                    >
+                      ... Not a toxic message
+                    </button>
+                  )}
+
+                  {/* Case 2: Show "Toxic message" when message is not toxic with no feedback OR marked as Not Toxic */}
+                  {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic === false && 
+                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
+                    messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Not Toxic") && (
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                      onClick={() => optionMenu.messageId && handleToxicFeedback(optionMenu.messageId, true)}
+                    >
+                      ... Toxic message
+                    </button>
+                  )}
+
+                  {/* Show Hide/Unhide only for toxic messages or messages marked as Toxic */}
+                  {((messages.find(msg => msg.id === optionMenu.messageId)?.isToxic && 
+                     messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === null) || 
+                    messages.find(msg => msg.id === optionMenu.messageId)?.userFeedback === "Toxic") && (
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-500"
+                      onClick={() => {
+                        if (!optionMenu.messageId) return;
+                        setMessages(prevMessages => 
+                          prevMessages.map(msg => 
+                            msg.id === optionMenu.messageId 
+                              ? { ...msg, isHidden: !msg.isHidden }
+                              : msg
+                          )
+                        );
+                        setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } });
+                      }}
+                    >
+                      {messages.find(msg => msg.id === optionMenu.messageId)?.isHidden 
+                        ? "Show message" 
+                        : "Hide message"}
+                    </button>
+                  )}
+
+                  {/* Always show Delete option */}
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
+                  >
+                    Delete message
+                  </button>
+                </>
               )}
-              {/* Add Hide/Unhide button for toxic messages */}
-              {optionMenu.messageId && messages.find(msg => 
-                msg.id === optionMenu.messageId && 
-                (msg.isToxic || msg.userFeedback === "Toxic")
-              ) && (
-                <button
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-500"
-                  onClick={() => {
-                    if (!optionMenu.messageId) return;
-                    setMessages(prevMessages => 
-                      prevMessages.map(msg => 
-                        msg.id === optionMenu.messageId 
-                          ? { ...msg, isHidden: !msg.isHidden }
-                          : msg
-                      )
-                    );
-                    setOptionMenu({ visible: false, messageId: null, position: { top: 0, left: 0 } });
-                  }}
-                >
-                  {messages.find(msg => msg.id === optionMenu.messageId)?.isHidden 
-                    ? "Show message" 
-                    : "Hide message"}
-                </button>
-              )}
-              <button
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                onClick={() => optionMenu.messageId && handleDeleteMessage(optionMenu.messageId)}
-              >
-                Delete message
-              </button>
             </div>
           )}
 
