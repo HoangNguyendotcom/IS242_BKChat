@@ -119,8 +119,8 @@ export default function AdminPage() {
   }, [])
 
   // Calculate totals from fetched data
-  const totalMessages = friends.reduce((sum, friend) => sum + friend.totalMessages, 0)
-  const toxicMessages = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0)
+  // const totalMessages = friends.reduce((sum, friend) => sum + friend.totalMessages, 0)
+  // const toxicMessages = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0)
 
   // Define interfaces for ML data
   interface ModelPerformance {
@@ -149,77 +149,114 @@ export default function AdminPage() {
   }
 
   // ML model data for DASHBOARD tab
-  const mlData: MlData = {
-    totalMessages: totalMessages,
-    toxicMessages: toxicMessages,
+  const [mlData, setMlData] = useState<MlData>({
+    totalMessages: 0,
+    toxicMessages: 0,
     userFeedback: {
-      toxic: 90,
-      notToxic: 30,
+      toxic: 0,
+      notToxic: 0,
     },
-    modelPerformance: { // Initialize with default values matching the interface
+    modelPerformance: {
       f1Score: 0,
       recall: 0,
       precision: 0,
       userFeedbackRate: 0,
     },
-    feedbackAnalysis: { // Initialize with default values matching the interface
+    feedbackAnalysis: {
       truePositive: 0,
       falseNegative: 0,
       falsePositive: 0,
       trueNegative: 0,
     },
-  };
-  
-  // Calculate
-  const total = mlData.totalMessages;
+  });
 
-  const totalFeedback = mlData.userFeedback.toxic + mlData.userFeedback.notToxic;
-  const userFeedbackRate = (totalFeedback / mlData.totalMessages) * 100;
+  // Separate useEffect for fetching feedback data
+  useEffect(() => {
+    const fetchFeedbackData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No token found');
+        }
 
-  // Assumptions for basic metrics
-  // False positives - messages the model predicted as toxic but users say are not toxic
-  const falsePositive = mlData.userFeedback.notToxic;
+        const feedbackResponse = await fetch('http://localhost:5000/api/settings/get-feedback-counts', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-  // False negatives - messages the model predicted as not toxic but users say are toxic
-  const falseNegative = mlData.userFeedback.toxic;
+        if (!feedbackResponse.ok) {
+          throw new Error('Failed to fetch feedback counts');
+        }
 
-  // True positives - messages the model correctly predicted as toxic
-  // Total toxic predictions minus false positives
-  const truePositive = mlData.toxicMessages - falsePositive;
+        const feedbackData = await feedbackResponse.json();
+        console.log('Feedback data:', feedbackData); // Debug log
+        
+        setMlData(prevData => {
+          console.log('Previous ML data:', prevData); // Debug log
+          const newData = {
+            ...prevData,
+            userFeedback: {
+              toxic: feedbackData.wrong_toxic_count || 0,
+              notToxic: feedbackData.wrong_not_toxic_count || 0,
+            }
+          };
+          console.log('New ML data:', newData); // Debug log
+          return newData;
+        });
+      } catch (error) {
+        console.error('Error fetching feedback data:', error);
+      }
+    };
 
-  // True negatives - messages the model correctly predicted as not toxic
-  // Total messages minus toxic predictions minus false negatives
-  const trueNegative = mlData.totalMessages - mlData.toxicMessages - falseNegative;
+    fetchFeedbackData();
+    const intervalId = setInterval(fetchFeedbackData, 5000);
+    return () => clearInterval(intervalId);
+  }, []); // No dependencies needed for feedback data
 
-  // Calculate metrics
-  // Precision = TP / (TP + FP)
-  const precisionDenominator = truePositive + falsePositive;
-  const precision = precisionDenominator === 0 ? 0 : truePositive / precisionDenominator;
+  // Separate useEffect for updating message counts from friends data
+  useEffect(() => {
+    if (!friends.length) return;
 
-  // Recall = TP / (TP + FN)
-  const recallDenominator = truePositive + falseNegative;
-  const recall = recallDenominator === 0 ? 0 : truePositive / recallDenominator;
+    const totalMsgs = friends.reduce((sum, friend) => sum + friend.totalMessages, 0);
+    const toxicMsgs = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0);
 
-  // F1 Score = 2 * (precision * recall) / (precision + recall)
-  const f1ScoreDenominator = precision + recall;
-  const f1Score = f1ScoreDenominator === 0 ? 0 : 2 * (precision * recall) / f1ScoreDenominator;
-  
-  // Update model performance with formatted percentages
-  mlData.modelPerformance = {
-    f1Score: roundNumber(f1Score * 100, 2),
-    recall: roundNumber(recall * 100, 2),
-    precision: roundNumber(precision * 100, 2),
-    userFeedbackRate: roundNumber(userFeedbackRate, 2),
-  };
-  
-  // Calculate percentages for pie chart
-  
-  mlData.feedbackAnalysis = {
-    truePositive: roundNumber((truePositive / total) * 100, 2),
-    falseNegative: roundNumber((falseNegative / total) * 100, 2),
-    falsePositive: roundNumber((falsePositive / total) * 100, 2),
-    trueNegative: roundNumber((trueNegative / total) * 100, 2),
-  };
+    setMlData(prevData => ({
+      ...prevData,
+      totalMessages: totalMsgs,
+      toxicMessages: toxicMsgs
+    }));
+  }, [friends]); // Only depend on friends data
+
+  // Keep the existing useEffect for metrics calculations
+  useEffect(() => {
+    if (mlData.totalMessages === 0) return;
+
+    const total = mlData.totalMessages;
+    const totalFeedback = mlData.userFeedback.toxic + mlData.userFeedback.notToxic;
+    const userFeedbackRate = total > 0 ? (totalFeedback / total) * 100 : 0;
+
+    const falsePositive = mlData.userFeedback.notToxic;
+    const falseNegative = mlData.userFeedback.toxic;
+    const truePositive = mlData.toxicMessages - falsePositive;
+    const trueNegative = total - mlData.toxicMessages - falseNegative;
+
+    setMlData(prevData => ({
+      ...prevData,
+      modelPerformance: {
+        f1Score: roundNumber(truePositive > 0 ? (2 * truePositive / (2 * truePositive + falsePositive + falseNegative)) * 100 : 0, 2),
+        recall: roundNumber(truePositive > 0 ? (truePositive / (truePositive + falseNegative)) * 100 : 0, 2),
+        precision: roundNumber(truePositive > 0 ? (truePositive / (truePositive + falsePositive)) * 100 : 0, 2),
+        userFeedbackRate: roundNumber(userFeedbackRate, 2),
+      },
+      feedbackAnalysis: {
+        truePositive: roundNumber(total > 0 ? (truePositive / total) * 100 : 0, 2),
+        falseNegative: roundNumber(total > 0 ? (falseNegative / total) * 100 : 0, 2),
+        falsePositive: roundNumber(total > 0 ? (falsePositive / total) * 100 : 0, 2),
+        trueNegative: roundNumber(total > 0 ? (trueNegative / total) * 100 : 0, 2),
+      }
+    }));
+  }, [mlData.totalMessages, mlData.toxicMessages, mlData.userFeedback.toxic, mlData.userFeedback.notToxic]);
 
   // Find your toggleOptionMenu function and replace it with this version
   const toggleOptionMenu = (index: number) => {

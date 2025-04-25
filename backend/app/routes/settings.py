@@ -162,3 +162,21 @@ def update_counters():
     except Exception as e:
         print(f"Error in update_counters: {str(e)}")  # Debug log
         return jsonify({'message': str(e)}), 500
+
+# Get feedback counts endpoint
+@settings_bp.route('/get-feedback-counts', methods=['GET'])
+@jwt_required()
+def get_feedback_counts():
+    try:
+        # Count documents in wrong_toxic and wrong_not_toxic collections
+        wrong_toxic_count = mongo.db.wrong_toxic.count_documents({})
+        wrong_not_toxic_count = mongo.db.wrong_not_toxic.count_documents({})
+        
+        return jsonify({
+            'wrong_toxic_count': wrong_toxic_count,
+            'wrong_not_toxic_count': wrong_not_toxic_count
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in get_feedback_counts: {str(e)}")  # Debug log
+        return jsonify({'message': str(e)}), 500
