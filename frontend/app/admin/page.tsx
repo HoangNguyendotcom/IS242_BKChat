@@ -11,6 +11,7 @@ export default function AdminPage() {
   const [activeOptionMenu, setActiveOptionMenu] = useState<number | null>(null)
   const [friends, setFriends] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>({ name: '', username: '' })
   const router = useRouter()
   const menuItems = [
     { id: "USER", icon: User, label: "USER" },
@@ -291,6 +292,18 @@ export default function AdminPage() {
       setIsClient(true)
     }, [])
 
+  // Add useEffect to get current user data
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      const user = JSON.parse(userData)
+      setCurrentUser({
+        name: user.name || '',
+        username: user.username || ''
+      })
+    }
+  }, [])
+
   return (
     <div className="flex h-screen bg-white" onClick={handleClickOutside}>
       {/* Left sidebar */}
@@ -360,11 +373,11 @@ export default function AdminPage() {
     <div className="bg-white rounded-lg shadow-md p-10 w-full max-w-2xl"> {/* Increased padding and max width */}
       <div className="flex items-center space-x-8 mb-8"> {/* Increased spacing */}
         <div className="w-32 h-32 rounded-full bg-gray-200 overflow-hidden"> {/* Increased image size */}
-          <Image src="/images/profile.png" alt="Cong Minh" width={128} height={128} className="object-cover" />
+          <Image src="/images/profile.png" alt={currentUser.name} width={128} height={128} className="object-cover" />
         </div>
         <div>
-          <h2 className="text-4xl font-bold">Cong Minh</h2> {/* Larger text */}
-          <p className="text-gray-500 text-xl">@tcminh.sdh241</p> {/* Larger text */}
+          <h2 className="text-4xl font-bold">{currentUser.name}</h2> {/* Larger text */}
+          <p className="text-gray-500 text-xl">@{currentUser.username}</p> {/* Larger text */}
         </div>
       </div>
       <div className="space-y-4">
