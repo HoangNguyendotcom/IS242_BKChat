@@ -9,6 +9,8 @@ import { Home, User, LayoutDashboard, Settings, Bell, LogOut, MoreHorizontal } f
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [activeOptionMenu, setActiveOptionMenu] = useState<number | null>(null)
+  const [friends, setFriends] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const menuItems = [
     { id: "USER", icon: User, label: "USER" },
@@ -26,20 +28,99 @@ export default function AdminPage() {
     return Math.round(num * factor) / factor;
   }
 
-  // Friend list data for USER tab
-  const friends = [
-    { name: "Dac Hoang", totalMessages: 813, toxicMessages: 72 },
-    { name: "Tuan Nam", totalMessages: 645, toxicMessages: 210 },
-    { name: "Hoang Long", totalMessages: 404, toxicMessages: 60 },
-    { name: "Le Phu", totalMessages: 100, toxicMessages: 40 },
-    { name: "Tri Cuong", totalMessages: 38, toxicMessages: 14 },
-  ].map(friend => ({
-    ...friend,
-    toxicRate: ((friend.toxicMessages / friend.totalMessages) * 100).toFixed(1) + "%"
-  }));
+  // Fetch friends data
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          throw new Error('No token found')
+        }
 
-  const totalMessages = friends.reduce((sum, friend) => sum + friend.totalMessages, 0);
-  const toxicMessages = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0);
+        // 1. Get current user data from localStorage
+        const userData = localStorage.getItem('user')
+        if (!userData) {
+          throw new Error('No user data found')
+        }
+        const currentUser = JSON.parse(userData)
+
+        // 2. Get all users to get friend names
+        const usersResponse = await fetch('http://localhost:5000/api/auth/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!usersResponse.ok) {
+          throw new Error('Failed to fetch users')
+        }
+
+        const usersData = await usersResponse.json()
+        
+        // Create a mapping of usernames to their full names
+        const userNameMapping = usersData.users.reduce((acc: any, user: any) => {
+          acc[user.username] = user.name
+          return acc
+        }, {})
+
+        // 3. Get fresh contacts data
+        const contactsResponse = await fetch('http://localhost:5000/api/chat/get_contacts_and_conversations', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (!contactsResponse.ok) {
+          throw new Error('Failed to fetch contacts')
+        }
+
+        const contactsData = await contactsResponse.json()
+        console.log('Contacts data:', contactsData)
+
+        interface FriendData {
+          name: string
+          totalMessages: number
+          toxicMessages: number
+          toxicRate: string
+        }
+
+        // Transform the friends data using the current user's friends object
+        const formattedFriends = Object.entries(currentUser.friends || {}).map(([username, data]: [string, any]): FriendData => {
+          return {
+            name: userNameMapping[username] || username,
+            totalMessages: data.messageCounter || 0,
+            toxicMessages: data.toxicCounter || 0,
+            toxicRate: data.messageCounter > 0 
+              ? ((data.toxicCounter / data.messageCounter) * 100).toFixed(1) + "%" 
+              : "0%"
+          }
+        }).sort((a: FriendData, b: FriendData) => b.totalMessages - a.totalMessages)
+
+        console.log('Current user friends:', currentUser.friends)
+        console.log('User name mapping:', userNameMapping)
+        console.log('Formatted friends:', formattedFriends)
+
+        setFriends(formattedFriends)
+      } catch (error) {
+        console.error('Error fetching friends:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Call fetchFriends when component mounts
+    fetchFriends()
+
+    // Set up an interval to refresh the data every few seconds
+    const intervalId = setInterval(fetchFriends, 5000)
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId)
+  }, [])
+
+  // Calculate totals from fetched data
+  const totalMessages = friends.reduce((sum, friend) => sum + friend.totalMessages, 0)
+  const toxicMessages = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0)
 
   // Define interfaces for ML data
   interface ModelPerformance {
@@ -262,75 +343,80 @@ export default function AdminPage() {
           {activeTab === "USER" && (
             <div>
               <h2 className="text-xl font-bold mb-6">FRIEND LIST:</h2>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                </div>
+              ) : (
+                <div className="relative overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Total Messages</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Toxic Messages</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Toxic Rate</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {friends.map((friend, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">{friend.name}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{friend.totalMessages}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
+                            {friend.toxicMessages}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
+                            {friend.toxicRate}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">
+                            <div className="relative"> {/* Keep this relative container */}
+                              <button
+                                className="text-blue-500"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleOptionMenu(index)
+                                }}
+                              >
+                                <MoreHorizontal className="h-5 w-5 inline" />
+                              </button>
 
-              <div className="relative overflow-x-auto"> {/* Changed back to overflow-x-auto but added relative */}
-                <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Total Messages</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Toxic Messages</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Toxic Rate</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Action</th>
-                  </tr>
-                </thead>
-              <tbody>
-              {friends.map((friend, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                <td className="border border-gray-300 px-4 py-2">{friend.name}</td>
-                <td className="border border-gray-300 px-4 py-2 text-center">{friend.totalMessages}</td>
-                <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
-                  {friend.toxicMessages}
-                  </td>
-                <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
-                  {friend.toxicRate}
-                </td>
-                <td className="border border-gray-300 px-4 py-2 text-center">
-                  <div className="relative"> {/* Keep this relative container */}
-                    <button
-                      className="text-blue-500"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleOptionMenu(index)
-                      }}
-                    >
-                      <MoreHorizontal className="h-5 w-5 inline" />
-                    </button>
+                                  {activeOptionMenu === index && (
+                                  <div className="fixed bg-white shadow-lg rounded-md border border-gray-200 w-40 py-1 z-50"> {/* Changed from absolute to fixed for better positioning */}
+                                  <div className="px-3 py-2 text-center font-medium border-b border-gray-100">OPTIONS</div>
+                                  <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                                    <span>Report</span>
+                                  </button>
+                                  <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-500">
+                                    <span>Block</span>
+                                  </button>
+                                  <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
+                                    <span>Unfriend</span>
+                                  </button>
+                                  <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-green-500">
+                                    <span>Uncheck</span>
+                                  </button>
+                                </div>
+                                )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-                        {activeOptionMenu === index && (
-                        <div className="fixed bg-white shadow-lg rounded-md border border-gray-200 w-40 py-1 z-50"> {/* Changed from absolute to fixed for better positioning */}
-                        <div className="px-3 py-2 text-center font-medium border-b border-gray-100">OPTIONS</div>
-                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-                          <span>Report</span>
-                        </button>
-                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-red-500">
-                          <span>Block</span>
-                        </button>
-                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-                          <span>Unfriend</span>
-                        </button>
-                        <button className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-green-500">
-                          <span>Uncheck</span>
-                        </button>
-                      </div>
-                      )}
-                  </div>
-                </td>
-              </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex justify-center mt-4">
-          <div className="flex space-x-2">
-          <button className="px-3 py-1 bg-gray-300 rounded">1</button>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">2</button>
-          <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">3</button>
-        </div>
-      </div>
-    </div>
-    )}
+              <div className="flex justify-center mt-4">
+                <div className="flex space-x-2">
+                <button className="px-3 py-1 bg-gray-300 rounded">1</button>
+                <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">2</button>
+                <button className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded">3</button>
+              </div>
+            </div>
+          </div>
+        )}
           {activeTab === "DASHBOARD" && (
             <div>
               <div className="flex justify-between items-center mb-6">
