@@ -180,3 +180,23 @@ def get_feedback_counts():
     except Exception as e:
         print(f"Error in get_feedback_counts: {str(e)}")  # Debug log
         return jsonify({'message': str(e)}), 500
+
+# Get total messages count endpoint
+@settings_bp.route('/get-total-messages', methods=['GET'])
+@jwt_required()
+def get_total_messages():
+    try:
+        # Count total messages in the database
+        total_messages = mongo.db.messages.count_documents({})
+        
+        # Count toxic messages in the database
+        toxic_messages = mongo.db.messages.count_documents({"isToxic": True})
+        
+        return jsonify({
+            'total_messages': total_messages,
+            'toxic_messages': toxic_messages
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in get_total_messages: {str(e)}")  # Debug log
+        return jsonify({'message': str(e)}), 500

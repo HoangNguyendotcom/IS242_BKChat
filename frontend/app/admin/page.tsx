@@ -85,8 +85,8 @@ export default function AdminPage() {
 
         interface FriendData {
           name: string
-          totalMessages: number
-          toxicMessages: number
+          friendTotalMessages: number
+          friendToxicMessages: number
           toxicRate: string
         }
 
@@ -94,13 +94,13 @@ export default function AdminPage() {
         const formattedFriends = Object.entries(currentUser.friends || {}).map(([username, data]: [string, any]): FriendData => {
           return {
             name: userNameMapping[username] || username,
-            totalMessages: data.messageCounter || 0,
-            toxicMessages: data.toxicCounter || 0,
+            friendTotalMessages: data.messageCounter || 0,
+            friendToxicMessages: data.toxicCounter || 0,
             toxicRate: data.messageCounter > 0 
               ? ((data.toxicCounter / data.messageCounter) * 100).toFixed(1) + "%" 
               : "0%"
           }
-        }).sort((a: FriendData, b: FriendData) => b.totalMessages - a.totalMessages)
+        }).sort((a: FriendData, b: FriendData) => b.friendTotalMessages - a.friendTotalMessages)
 
         console.log('Current user friends:', currentUser.friends)
         console.log('User name mapping:', userNameMapping)
@@ -117,12 +117,6 @@ export default function AdminPage() {
 
     // Call fetchFriends when component mounts
     fetchFriends()
-
-    // Set up an interval to refresh the data every few seconds
-    const intervalId = setInterval(fetchFriends, 5000)
-
-    // Cleanup interval on component unmount
-    return () => clearInterval(intervalId)
   }, [])
 
   // Calculate totals from fetched data
@@ -145,8 +139,8 @@ export default function AdminPage() {
   }
 
   interface MlData {
-    totalMessages: number;
-    toxicMessages: number;
+    systemTotalMessages: number;
+    systemToxicMessages: number;
     userFeedback: {
       toxic: number;
       notToxic: number;
@@ -157,8 +151,8 @@ export default function AdminPage() {
 
   // ML model data for DASHBOARD tab
   const [mlData, setMlData] = useState<MlData>({
-    totalMessages: 0,
-    toxicMessages: 0,
+    systemTotalMessages: 0,
+    systemToxicMessages: 0,
     userFeedback: {
       toxic: 0,
       notToxic: 0,
@@ -217,36 +211,55 @@ export default function AdminPage() {
     };
 
     fetchFeedbackData();
-    const intervalId = setInterval(fetchFeedbackData, 5000);
-    return () => clearInterval(intervalId);
   }, []); // No dependencies needed for feedback data
 
-  // Separate useEffect for updating message counts from friends data
+  // Separate useEffect for fetching total messages count
   useEffect(() => {
-    if (!friends.length) return;
+    const fetchTotalMessages = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No token found');
+        }
 
-    const totalMsgs = friends.reduce((sum, friend) => sum + friend.totalMessages, 0);
-    const toxicMsgs = friends.reduce((sum, friend) => sum + friend.toxicMessages, 0);
+        const response = await fetch('http://localhost:5000/api/settings/get-total-messages', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-    setMlData(prevData => ({
-      ...prevData,
-      totalMessages: totalMsgs,
-      toxicMessages: toxicMsgs
-    }));
-  }, [friends]); // Only depend on friends data
+        if (!response.ok) {
+          throw new Error('Failed to fetch total messages count');
+        }
+
+        const data = await response.json();
+        console.log('Total messages data:', data); // Debug log
+        
+        setMlData(prevData => ({
+          ...prevData,
+          systemTotalMessages: data.total_messages || 0,
+          systemToxicMessages: data.toxic_messages || 0
+        }));
+      } catch (error) {
+        console.error('Error fetching total messages count:', error);
+      }
+    };
+
+    fetchTotalMessages();
+  }, []); // No dependencies needed for total messages count
 
   // Keep the existing useEffect for metrics calculations
   useEffect(() => {
-    if (mlData.totalMessages === 0) return;
+    if (mlData.systemTotalMessages === 0) return;
 
-    const total = mlData.totalMessages;
+    const total = mlData.systemTotalMessages;
     const totalFeedback = mlData.userFeedback.toxic + mlData.userFeedback.notToxic;
     const userFeedbackRate = total > 0 ? (totalFeedback / total) * 100 : 0;
 
     const falsePositive = mlData.userFeedback.notToxic;
     const falseNegative = mlData.userFeedback.toxic;
-    const truePositive = mlData.toxicMessages - falsePositive;
-    const trueNegative = total - mlData.toxicMessages - falseNegative;
+    const truePositive = mlData.systemToxicMessages - falsePositive;
+    const trueNegative = total - mlData.systemToxicMessages - falseNegative;
 
     setMlData(prevData => ({
       ...prevData,
@@ -263,7 +276,7 @@ export default function AdminPage() {
         trueNegative: roundNumber(total > 0 ? (trueNegative / total) * 100 : 0, 2),
       }
     }));
-  }, [mlData.totalMessages, mlData.toxicMessages, mlData.userFeedback.toxic, mlData.userFeedback.notToxic]);
+  }, [mlData.systemTotalMessages, mlData.systemToxicMessages, mlData.userFeedback.toxic, mlData.userFeedback.notToxic]);
 
   // Find your toggleOptionMenu function and replace it with this version
   const toggleOptionMenu = (index: number) => {
@@ -397,8 +410,8 @@ export default function AdminPage() {
                     <thead>
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
-                        <th className="border border-gray-300 px-4 py-2 text-center">Total Messages</th>
-                        <th className="border border-gray-300 px-4 py-2 text-center">Toxic Messages</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Friend Total Messages</th>
+                        <th className="border border-gray-300 px-4 py-2 text-center">Friend Toxic Messages</th>
                         <th className="border border-gray-300 px-4 py-2 text-center">Toxic Rate</th>
                         <th className="border border-gray-300 px-4 py-2 text-center">Action</th>
                       </tr>
@@ -407,9 +420,9 @@ export default function AdminPage() {
                       {friends.map((friend, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-300 px-4 py-2">{friend.name}</td>
-                          <td className="border border-gray-300 px-4 py-2 text-center">{friend.totalMessages}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-center">{friend.friendTotalMessages}</td>
                           <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
-                            {friend.toxicMessages}
+                            {friend.friendToxicMessages}
                           </td>
                           <td className="border border-gray-300 px-4 py-2 text-center text-red-500">
                             {friend.toxicRate}
@@ -472,12 +485,12 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <p className="text-xl text-gray-500 mb-2">Total messages:</p>
-                  <p className="text-5xl font-bold text-center">{mlData.totalMessages}</p>
+                  <p className="text-xl text-gray-500 mb-2">System Total Messages:</p>
+                  <p className="text-5xl font-bold text-center">{mlData.systemTotalMessages}</p>
                 </div>
                 <div className="bg-white p-4 rounded-md shadow-sm">
-                  <p className="text-xl text-gray-500 mb-2">Toxic messages:</p>
-                  <p className="text-5xl font-bold text-center">{mlData.toxicMessages}</p>
+                  <p className="text-xl text-gray-500 mb-2">System Toxic Messages:</p>
+                  <p className="text-5xl font-bold text-center">{mlData.systemToxicMessages}</p>
                 </div>
                 <div className="bg-white p-4 rounded-md shadow-sm">
                   <p className="text-xl text-gray-500 mb-2">User feedback:</p>

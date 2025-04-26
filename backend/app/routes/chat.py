@@ -41,7 +41,7 @@ def send_message():
     try:
         # In TEST_MODE, always return False for toxicity
         if TEST_MODE:
-            is_toxic = False
+            is_toxic = True
         else:
             # Set is_toxic to False by default, only check if explicitly requested
             is_toxic = False
