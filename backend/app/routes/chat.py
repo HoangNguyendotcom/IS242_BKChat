@@ -145,23 +145,35 @@ def get_contacts_and_conversations():
         print(f"Found {len(friends)} friends")  # Debug log
 
         conversations = {}
+        # Get all messages where user is either sender or receiver, sorted by timestamp descending
         messages = mongo.db.messages.find({
             "$or": [
                 {"senderId": ObjectId(user_id)},
                 {"receiverId": ObjectId(user_id)}
             ]
-        })
+        }).sort("timestamp", -1)  # Sort by timestamp descending
         
+        # Process messages and keep only last 10 per conversation
         for message in messages:
             message['_id'] = str(message['_id'])
             message['senderId'] = str(message['senderId'])
             message['receiverId'] = str(message['receiverId'])
             senderId = message['senderId']
             receiverId = message['receiverId']
-            conversationId = str(senderId) + '_' + str(receiverId)
+            
+            # Create a consistent conversation ID regardless of sender/receiver order
+            conversationId = '_'.join(sorted([senderId, receiverId]))
+            
             if conversationId not in conversations:
                 conversations[conversationId] = []
-            conversations[conversationId].append(message)
+            
+            # Only add message if we haven't reached 10 messages for this conversation
+            if len(conversations[conversationId]) < 10:
+                conversations[conversationId].append(message)
+
+        # Sort messages within each conversation by timestamp ascending
+        for conversationId in conversations:
+            conversations[conversationId].sort(key=lambda x: x['timestamp'])
 
         print(f"Found {len(conversations)} conversations")  # Debug log
         return jsonify({'contacts': friends, 'conversations': conversations}), 200
@@ -181,13 +193,14 @@ def get_messages_by_contact(contact_id):
         return jsonify({'message': 'User not found'}), 404
 
     try:
-        # Find messages between current user and contact
+        # Find messages between current user and contact, sorted by timestamp descending
+        # and limited to 10 messages
         messages = mongo.db.messages.find({
             "$or": [
                 {"senderId": ObjectId(current_user_id), "receiverId": ObjectId(contact_id)},
                 {"senderId": ObjectId(contact_id), "receiverId": ObjectId(current_user_id)}
             ]
-        }).sort("timestamp", 1)  # Sort by timestamp ascending
+        }).sort("timestamp", -1).limit(10)  # Sort by timestamp descending and limit to 10
 
         formatted_messages = []
         for message in messages:
@@ -195,6 +208,9 @@ def get_messages_by_contact(contact_id):
             message['senderId'] = str(message['senderId'])
             message['receiverId'] = str(message['receiverId'])
             formatted_messages.append(message)
+
+        # Sort messages in ascending order before returning
+        formatted_messages.sort(key=lambda x: x['timestamp'])
 
         return jsonify({'messages': formatted_messages}), 200
     except Exception as e:
