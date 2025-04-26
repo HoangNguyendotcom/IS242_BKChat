@@ -8,6 +8,10 @@ from app.models.message import Message
 from app.models.user import User
 from bson import ObjectId
 
+# TEST_MODE: Set to True to always return False for toxicity check (for testing)
+# Set to False to use the actual model for toxicity check
+TEST_MODE = True
+
 # Get all messages endpoint
 @chat_bp.route('/messages', methods=['GET'])
 def get_messages():
@@ -22,6 +26,7 @@ def send_message():
     receiver_id = data.get('receiverId')
     text = data.get('text')
     is_emoji = data.get('isEmoji', False)
+    check_toxicity = data.get('checkToxicity', False)
 
     if not receiver_id or not text:
         return jsonify({'message': 'Receiver ID and text are required'}), 400
@@ -34,8 +39,14 @@ def send_message():
         return jsonify({'message': 'User not found'}), 404
 
     try:
-        # Check message toxicity using ML model
-        is_toxic = toxicity_service.check_toxicity(text)
+        # In TEST_MODE, always return False for toxicity
+        if TEST_MODE:
+            is_toxic = False
+        else:
+            # Set is_toxic to False by default, only check if explicitly requested
+            is_toxic = False
+            if check_toxicity:
+                is_toxic = toxicity_service.check_toxicity(text)
         
         message_id = Message.create(current_user_id, receiver_id, text, is_emoji, is_toxic)
         return jsonify({

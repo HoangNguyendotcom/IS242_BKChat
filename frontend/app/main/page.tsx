@@ -418,7 +418,8 @@ export default function MainPage() {
           receiverId: selectedContact,
           text: text,
           isEmoji: false,
-          checkOnly: true // Add this flag to indicate we only want to check toxicity
+          checkOnly: true,
+          checkToxicity: true // Add this flag to check toxicity
         })
       })
 
@@ -473,7 +474,8 @@ export default function MainPage() {
           receiverId: selectedContact,
           text: text,
           isEmoji: false,
-          checkOnly: false // This is an actual send
+          checkOnly: false, // This is an actual send
+          checkToxicity: isToxic // Add this flag to check toxicity if needed
         })
       })
 

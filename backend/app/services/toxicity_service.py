@@ -100,7 +100,9 @@ class ToxicityService:
                     inputs = {k: v.to(self.device) for k, v in inputs.items()}
                     outputs = self.model(**inputs)
                     probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
+                    
                     is_toxic = probabilities[0][1].item() > 0.5
+
 
             logger.debug(f"Toxicity check for '{text}': {is_toxic}")
             return is_toxic
