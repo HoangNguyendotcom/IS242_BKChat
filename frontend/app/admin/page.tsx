@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [friends, setFriends] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<{ name: string; username: string }>({ name: '', username: '' })
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0)
   const router = useRouter()
   const menuItems = [
     { id: "USER", icon: User, label: "USER" },
@@ -44,6 +45,10 @@ export default function AdminPage() {
           throw new Error('No user data found')
         }
         const currentUser = JSON.parse(userData)
+        setCurrentUser({
+          name: currentUser.name,
+          username: currentUser.username
+        })
 
         // 2. Get all users to get friend names
         const usersResponse = await fetch('http://localhost:5000/api/auth/users', {
@@ -102,6 +107,7 @@ export default function AdminPage() {
         console.log('Formatted friends:', formattedFriends)
 
         setFriends(formattedFriends)
+        setLastUpdateTime(Date.now())
       } catch (error) {
         console.error('Error fetching friends:', error)
       } finally {
@@ -291,18 +297,6 @@ export default function AdminPage() {
     useEffect(() => {
       setIsClient(true)
     }, [])
-
-  // Add useEffect to get current user data
-  useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      const user = JSON.parse(userData)
-      setCurrentUser({
-        name: user.name || '',
-        username: user.username || ''
-      })
-    }
-  }, [])
 
   return (
     <div className="flex h-screen bg-white" onClick={handleClickOutside}>

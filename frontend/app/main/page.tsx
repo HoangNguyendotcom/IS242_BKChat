@@ -56,6 +56,7 @@ export default function MainPage() {
   const [isMessagesLoading, setIsMessagesLoading] = useState(false)
   const [toxicWarningMessage, setToxicWarningMessage] = useState<string | null>(null)
   const [pendingToxicMessage, setPendingToxicMessage] = useState<{text: string} | null>(null)
+  const [lastMessageTimestamp, setLastMessageTimestamp] = useState<string | null>(null)
   const optionsMenuRef = useRef<HTMLDivElement>(null);
   const [optionMenu, setOptionMenu] = useState<{
     visible: boolean
@@ -207,6 +208,11 @@ export default function MainPage() {
             isHidden: msg.isToxic || msg.userFeedback === "Toxic"
           }))
           setMessages(formattedMessages)
+          
+          // Update last message timestamp
+          if (formattedMessages.length > 0) {
+            setLastMessageTimestamp(formattedMessages[formattedMessages.length - 1].timestamp)
+          }
         }
       } catch (error) {
         console.error('Error fetching messages:', error)
@@ -217,6 +223,52 @@ export default function MainPage() {
 
     fetchMessages()
   }, [selectedContact])
+
+  // Poll for new messages
+  useEffect(() => {
+    if (!selectedContact) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch(`http://localhost:5000/api/chat/messages/${selectedContact}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) return
+
+        const data = await response.json()
+        
+        if (data.messages) {
+          const formattedMessages = data.messages.map((msg: any) => ({
+            id: msg._id,
+            senderId: msg.senderId,
+            text: msg.text,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isEmoji: msg.isEmoji,
+            isToxic: msg.isToxic,
+            userFeedback: msg.userFeedback,
+            isHidden: msg.isToxic || msg.userFeedback === "Toxic"
+          }))
+
+          // Only update if there are new messages
+          if (formattedMessages.length > messages.length) {
+            setMessages(formattedMessages)
+            setLastMessageTimestamp(formattedMessages[formattedMessages.length - 1].timestamp)
+          }
+        }
+      } catch (error) {
+        console.error('Error polling messages:', error)
+      }
+    }, 3000) // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [selectedContact, messages.length])
 
   // Fetch all users when component mounts
   useEffect(() => {
