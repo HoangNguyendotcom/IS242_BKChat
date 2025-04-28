@@ -3,11 +3,11 @@ from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from . import chat_bp
 from app import mongo
-from app.services.toxicity_service import toxicity_service
 from app.models.message import Message
 from app.models.user import User
 from bson import ObjectId
 import random
+import requests
 
 # TEST_MODE: Set to True to always return False for toxicity check (for testing)
 # Set to False to use the actual model for toxicity check
@@ -30,13 +30,15 @@ def check_toxicity():
         return jsonify({'message': 'Text is required'}), 400
 
     try:
-        # In TEST_MODE, return random toxicity with 70% false, 30% true
-        if TEST_MODE:
-            is_toxic = random.random() < 0.3  # 30% chance of being toxic
+        # Proxy the request to the external API
+        external_url = 'http://bkchat-classifier.ddns.net:5000/inference'
+        resp = requests.post(external_url, json={"message": text})
+        if resp.status_code == 200:
+            result = resp.json()
+            is_toxic = result.get('result') == '1'
+            return jsonify({'isToxic': is_toxic}), 200
         else:
-            is_toxic = toxicity_service.check_toxicity(text)
-        
-        return jsonify({'isToxic': is_toxic}), 200
+            return jsonify({'message': 'External API error', 'status_code': resp.status_code}), 500
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
