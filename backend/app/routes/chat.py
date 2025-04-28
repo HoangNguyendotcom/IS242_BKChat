@@ -7,6 +7,7 @@ from app.services.toxicity_service import toxicity_service
 from app.models.message import Message
 from app.models.user import User
 from bson import ObjectId
+import random
 
 # TEST_MODE: Set to True to always return False for toxicity check (for testing)
 # Set to False to use the actual model for toxicity check
@@ -29,9 +30,9 @@ def check_toxicity():
         return jsonify({'message': 'Text is required'}), 400
 
     try:
-        # In TEST_MODE, always return False for toxicity
+        # In TEST_MODE, return random toxicity with 70% false, 30% true
         if TEST_MODE:
-            is_toxic = True
+            is_toxic = random.random() < 0.3  # 30% chance of being toxic
         else:
             is_toxic = toxicity_service.check_toxicity(text)
         
