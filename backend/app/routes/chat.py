@@ -18,6 +18,27 @@ def get_messages():
     # Reserved for future implementation
     pass
 
+# Check toxicity endpoint
+@chat_bp.route('/check_toxicity', methods=['POST'])
+@jwt_required()
+def check_toxicity():
+    data = request.get_json()
+    text = data.get('text')
+
+    if not text:
+        return jsonify({'message': 'Text is required'}), 400
+
+    try:
+        # In TEST_MODE, always return False for toxicity
+        if TEST_MODE:
+            is_toxic = True
+        else:
+            is_toxic = toxicity_service.check_toxicity(text)
+        
+        return jsonify({'isToxic': is_toxic}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
 # Send message endpoint
 @chat_bp.route('/messages', methods=['POST'])
 @jwt_required()
@@ -26,7 +47,7 @@ def send_message():
     receiver_id = data.get('receiverId')
     text = data.get('text')
     is_emoji = data.get('isEmoji', False)
-    check_toxicity = data.get('checkToxicity', False)
+    is_toxic = data.get('isToxic', False)  # Get is_toxic from request instead of checking
 
     if not receiver_id or not text:
         return jsonify({'message': 'Receiver ID and text are required'}), 400
@@ -39,15 +60,6 @@ def send_message():
         return jsonify({'message': 'User not found'}), 404
 
     try:
-        # In TEST_MODE, always return False for toxicity
-        if TEST_MODE:
-            is_toxic = True
-        else:
-            # Set is_toxic to False by default, only check if explicitly requested
-            is_toxic = False
-            if check_toxicity:
-                is_toxic = toxicity_service.check_toxicity(text)
-        
         message_id = Message.create(current_user_id, receiver_id, text, is_emoji, is_toxic)
         return jsonify({
             'message': 'Message sent successfully', 

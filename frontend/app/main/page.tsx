@@ -459,19 +459,15 @@ export default function MainPage() {
         return false
       }
 
-      // Use the existing messages endpoint with a special flag to only check toxicity
-      const response = await fetch('http://localhost:5000/api/chat/messages', {
+      // Use a separate endpoint for toxicity checking
+      const response = await fetch('http://localhost:5000/api/chat/check_toxicity', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          receiverId: selectedContact,
-          text: text,
-          isEmoji: false,
-          checkOnly: true,
-          checkToxicity: true // Add this flag to check toxicity
+          text: text
         })
       })
 
@@ -480,7 +476,8 @@ export default function MainPage() {
       }
 
       const data = await response.json()
-      return data.isToxic
+      console.log('Toxicity check result:', data)
+      return data.isToxic === true
     } catch (error) {
       console.error('Error checking toxicity:', error)
       return false
@@ -493,16 +490,18 @@ export default function MainPage() {
     try {
       // First check toxicity
       const isToxic = await checkToxicity(messageInput)
+      console.log('Message toxicity status:', isToxic) // Add logging to debug
       
       if (isToxic) {
         // If toxic, store the message and show warning
         setPendingToxicMessage({ text: messageInput })
         setToxicWarningMessage(messageInput)
-        return
+        return // This return prevents the message from being sent
       }
-
+      
       // If not toxic, send immediately
       await sendMessage(messageInput, false)
+      setMessageInput("") // Clear input after sending
     } catch (error) {
       console.error('Error handling message submit:', error)
     }
@@ -526,8 +525,7 @@ export default function MainPage() {
           receiverId: selectedContact,
           text: text,
           isEmoji: false,
-          checkOnly: false, // This is an actual send
-          checkToxicity: isToxic // Add this flag to check toxicity if needed
+          isToxic: isToxic // This is just for marking the message as toxic, not for checking
         })
       })
 
@@ -536,6 +534,7 @@ export default function MainPage() {
       }
 
       const data = await response.json()
+      console.log('Message send response:', data)
 
       // Add the new message to the local state
       const newMessage = {
@@ -561,6 +560,9 @@ export default function MainPage() {
   const handleSendAnyway = async () => {
     if (pendingToxicMessage) {
       await sendMessage(pendingToxicMessage.text, true)
+      setMessageInput("") // Clear input after sending
+      setPendingToxicMessage(null) // Clear pending message
+      setToxicWarningMessage(null) // Clear warning
     }
   }
 
