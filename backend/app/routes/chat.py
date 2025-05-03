@@ -31,7 +31,7 @@ def check_toxicity():
 
     try:
         # Proxy the request to the external API
-        external_url = 'http://bkchat-classifier.ddns.net:5000/inference'
+        external_url = 'https://bkchat-classifier-92895094743.asia-southeast1.run.app/inference'
         resp = requests.post(external_url, json={"message": text})
         if resp.status_code == 200:
             result = resp.json()
